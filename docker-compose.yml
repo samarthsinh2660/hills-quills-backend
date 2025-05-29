@@ -1,0 +1,43 @@
+
+services:
+  mysql:
+    image: mysql:8
+    container_name: mysql_db
+    restart: always
+    environment:
+      MYSQL_ROOT_PASSWORD: root
+      MYSQL_DATABASE: hills_quills
+      MYSQL_USER: user
+      MYSQL_PASSWORD: password
+    ports:
+      - "3307:3306"
+    volumes:
+      - db_data:/var/lib/mysql
+      - ./src/database/tables.sql:/docker-entrypoint-initdb.d/tables.sql
+      - ./src/database/data.sql:/docker-entrypoint-initdb.d/data.sql
+
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: hills-quills-backend
+    restart: on-failure
+    depends_on:
+      - mysql
+    ports:
+      - "3000:3000"
+    environment:
+      NODE_ENV: development
+      NODE_NO_WARNINGS: 1
+      DB_HOST: mysql
+      DB_USER: user
+      DB_PASSWORD: password
+      DB_NAME: hills_quills
+      DB_PORT: 3306
+      PORT: 3000
+    volumes:
+      - ./src:/app/src
+    command: ["npm","run","dev"]
+
+volumes:
+  db_data:
