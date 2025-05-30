@@ -287,38 +287,43 @@ export const bulkDeleteArticles = async (req: Request, res: Response) => {
 };
 
 // Bulk approve articles
-// Start with just the controller to see if it's being hit
 export const bulkApproveArticles = async (req: Request, res: Response) => {
-  console.log('=== CONTROLLER HIT ===');
-  console.log('Method:', req.method);
-  console.log('URL:', req.url);
-  console.log('Body:', req.body);
-  console.log('Headers:', req.headers);
-  
   try {
     const { ids }: { ids: number[] } = req.body;
     
-    console.log('Extracted IDs:', ids);
-    
     if (!ids || !Array.isArray(ids) || ids.length === 0) {
-      console.log('Invalid IDs, sending 400 response');
       res.status(400).json(errorResponse("Article IDs array is required", 50005));
       return;
     }
     
-    console.log('About to call articleService.bulkApproveArticles');
+    await articleService.bulkApproveArticles(ids);
     
-    // Temporarily comment out the service call to isolate the issue
-    // await articleService.bulkApproveArticles(ids);
-    
-    console.log('Sending success response');
     res.json(successResponse(null, "Articles approved successfully"));
     
   } catch (error: any) {
-    console.log('Error in controller:', error);
-    res.status(500).json(errorResponse("Internal error"));
+    res.status(error.statusCode || 500).json(errorResponse(error.message, error.code));
   }
 };
+
+// Bulk reject articles
+export const bulkRejectArticles = async (req: Request, res: Response) => {
+  try {
+    const { ids }: { ids: number[] } = req.body;
+    
+    if (!ids || !Array.isArray(ids) || ids.length === 0) {
+      res.status(400).json(errorResponse("Article IDs array is required", 50005));
+      return;
+    }
+    
+    await articleService.bulkRejectArticles(ids);
+    
+    res.json(successResponse(null, "Articles rejected successfully"));
+    
+  } catch (error: any) {
+    res.status(error.statusCode || 500).json(errorResponse(error.message, error.code));
+  }
+};
+
 // Bulk mark as top news
 export const bulkMarkTopNews = async (req: Request, res: Response) => {
   try {

@@ -14,6 +14,7 @@ import {
   getTrendingArticles,
   bulkDeleteArticles,
   bulkApproveArticles,
+  bulkRejectArticles,
   bulkMarkTopNews,
   bulkUnmarkTopNews
 } from '../controller/article.controller.ts';
@@ -35,16 +36,19 @@ articleRouter.post('/:id/submit', authenticate, submitArticle);
 
 // Admin Only Routes
 const adminRouter = Router();
+
+// Bulk Operations (Admin Only) 
+adminRouter.post('/bulk/delete', authenticate, requireAdmin, bulkDeleteArticles);
+adminRouter.post('/bulk/approve', authenticate, requireAdmin, bulkApproveArticles);
+adminRouter.post('/bulk/reject', authenticate, requireAdmin, bulkRejectArticles);
+adminRouter.post('/bulk/top', authenticate, requireAdmin, bulkMarkTopNews);
+adminRouter.delete('/bulk/top', authenticate, requireAdmin, bulkUnmarkTopNews);
+
+// Individual Article Operations (Admin Only)
 adminRouter.post('/:id/approve', authenticate, requireAdmin, approveArticle);
 adminRouter.post('/:id/reject', authenticate, requireAdmin, rejectArticle);
 adminRouter.post('/:id/top', authenticate, requireAdmin, markTopNews);
 adminRouter.delete('/:id/top', authenticate, requireAdmin, unmarkTopNews);
-
-// Bulk Operations (Admin Only)
-adminRouter.post('/bulk/delete', authenticate, requireAdmin, bulkDeleteArticles);
-adminRouter.post('/bulk/approve', authenticate, requireAdmin, bulkApproveArticles);
-adminRouter.post('/bulk/top', authenticate, requireAdmin, bulkMarkTopNews);
-adminRouter.delete('/bulk/top', authenticate, requireAdmin, bulkUnmarkTopNews);
 
 // Mount admin routes
 articleRouter.use('/admin', adminRouter);

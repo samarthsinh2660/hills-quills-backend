@@ -543,39 +543,57 @@ export class ArticleService {
   // Bulk approve articles (admin only)
   async bulkApproveArticles(ids: number[]): Promise<void> {
     try {
-      console.log('bulkApproveArticles called with ids:', ids);
-      
       if (!ids.length) {
-        console.log('No IDs provided, throwing VALIDATION_ERROR');
         throw ERRORS.VALIDATION_ERROR;
       }
-  
-      const placeholders = ids.map(() => '?').join(',');
-      const query = `UPDATE articles SET status = 'approved', publish_date = NOW() WHERE id IN (${placeholders}) AND status = 'pending'`;
+
+      // First check if the articles exist at all
+      const checkPlaceholders = ids.map(() => '?').join(',');
+      const checkQuery = `SELECT COUNT(*) as count FROM articles WHERE id IN (${checkPlaceholders})`;
+      const [checkResult] = await db.execute<RowDataPacket[]>(checkQuery, ids);
       
-      console.log('Executing query:', query);
-      console.log('With parameters:', ids);
-      
-      const [result] = await db.execute(query, ids);
-      console.log('Database result:', result);
-      console.log('Result type:', typeof result);
-      console.log('Result keys:', Object.keys(result));
-      
-      // Try to access affectedRows from the result
-      const affectedRows = (result as any).affectedRows || (result as any).changedRows || 0;
-      console.log('Affected rows:', affectedRows);
-      
-      // Check if any rows were updated
-      if (affectedRows === 0) {
-        console.log('No rows affected, throwing ARTICLE_NOT_FOUND');
+      if (checkResult[0].count === 0) {
         throw ERRORS.ARTICLE_NOT_FOUND;
       }
       
-      console.log('Bulk approve completed successfully');
+      // Now approve pending articles without throwing error if none match
+      const placeholders = ids.map(() => '?').join(',');
+      const query = `UPDATE articles SET status = 'approved', publish_date = NOW() WHERE id IN (${placeholders}) AND status = 'pending'`;
+      await db.execute(query, ids);
       
     } catch (error) {
+      if (error === ERRORS.VALIDATION_ERROR || error === ERRORS.ARTICLE_NOT_FOUND) {
+        throw error;
+      }
+      throw ERRORS.ARTICLE_UPDATE_FAILED;
+    }
+  }
+
+  // Bulk reject articles (admin only)
+  async bulkRejectArticles(ids: number[]): Promise<void> {
+    try {
+      if (!ids.length) {
+        throw ERRORS.VALIDATION_ERROR;
+      }
+
+      // First check if the articles exist at all
+      const checkPlaceholders = ids.map(() => '?').join(',');
+      const checkQuery = `SELECT COUNT(*) as count FROM articles WHERE id IN (${checkPlaceholders})`;
+      const [checkResult] = await db.execute<RowDataPacket[]>(checkQuery, ids);
       
-      console.log('Throwing ARTICLE_UPDATE_FAILED');
+      if (checkResult[0].count === 0) {
+        throw ERRORS.ARTICLE_NOT_FOUND;
+      }
+      
+      // Now reject pending articles without throwing error if none match
+      const placeholders = ids.map(() => '?').join(',');
+      const query = `UPDATE articles SET status = 'rejected' WHERE id IN (${placeholders}) AND status = 'pending'`;
+      await db.execute(query, ids);
+      
+    } catch (error) {
+      if (error === ERRORS.VALIDATION_ERROR || error === ERRORS.ARTICLE_NOT_FOUND) {
+        throw error;
+      }
       throw ERRORS.ARTICLE_UPDATE_FAILED;
     }
   }
@@ -597,7 +615,6 @@ export class ArticleService {
 
   // Bulk unmark articles as top news (admin only)
   async bulkUnmarkAsTopNews(ids: number[]): Promise<void> {
-    console.log('=== BULK UNMARK CONTROLLER HIT ===');
     try {
       if (!ids.length) {
         throw ERRORS.VALIDATION_ERROR;
