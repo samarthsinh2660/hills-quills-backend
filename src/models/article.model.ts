@@ -9,6 +9,7 @@ CREATE TABLE articles (
   content        LONGTEXT,
   category       VARCHAR(100) NOT NULL,
   region         VARCHAR(100),
+  tags           JSON,
   status         ENUM('draft','pending','approved','rejected') NOT NULL DEFAULT 'draft',
   is_top_news    BOOLEAN NOT NULL DEFAULT FALSE,
   views_count    INT NOT NULL DEFAULT 0,
@@ -24,6 +25,11 @@ CREATE TABLE articles (
   FULLTEXT INDEX idx_search (title, content)
 )`;
 
+// If you need to add tags column to existing table, use this migration:
+export const ADD_TAGS_COLUMN = `
+ALTER TABLE articles ADD COLUMN tags JSON AFTER region;
+`;
+
 export interface Article extends RowDataPacket {
   id: number;
   author_id: number;
@@ -32,6 +38,7 @@ export interface Article extends RowDataPacket {
   content: string | null;
   category: string;
   region: string | null;
+  tags: string[] | null;
   status: 'draft' | 'pending' | 'approved' | 'rejected';
   is_top_news: boolean;
   views_count: number;
@@ -51,6 +58,7 @@ export interface CreateArticleRequest {
   content: string;
   category: string;
   region?: string;
+  tags?: string[];
 }
 
 export interface UpdateArticleRequest {
@@ -59,6 +67,7 @@ export interface UpdateArticleRequest {
   content?: string;
   category?: string;
   region?: string;
+  tags?: string[];
 }
 
 export interface ArticleFilters {
@@ -67,6 +76,7 @@ export interface ArticleFilters {
   region?: string;
   author_id?: number;
   is_top_news?: boolean;
+  tags?: string[];
   page?: number;
   limit?: number;
   sortBy?: 'created_at' | 'updated_at' | 'publish_date' | 'views_count' | 'title';
@@ -77,6 +87,7 @@ export interface SearchParams {
   query: string;
   category?: string;
   region?: string;
+  tags?: string[];
   page?: number;
   limit?: number;
 }
@@ -91,7 +102,7 @@ export interface ArticleTrending extends RowDataPacket, ArticleWithAuthor {
   trending_score?: number;
   views_per_hour?: number;
   hours_since_publish?: number;
-  velocity_score?: number; // if you use the velocity-only approach
+  velocity_score?: number;
 }
 
 // Predefined categories for Uttarakhand tourism news
@@ -121,6 +132,7 @@ export const UTTARAKHAND_REGIONS = [
   'Dehradun',
   'Haridwar',
   'Rishikesh',
+  'Uttarakhand',
   'Mussoorie',
   'Nainital',
   'Almora',
@@ -149,8 +161,8 @@ export type UttarakhandRegion = typeof UTTARAKHAND_REGIONS[number];
 export const ARTICLE_STATUS_TRANSITIONS: Record<Article['status'], Article['status'][]> = {
   draft: ['pending'],
   pending: ['approved', 'rejected'],
-  approved: [], // Cannot transition from approved
-  rejected: ['pending'] // Can resubmit after rejection
+  approved: [],
+  rejected: ['pending']
 };
 
 export function canTransitionStatus(currentStatus: Article['status'], newStatus: Article['status']): boolean {
@@ -163,6 +175,32 @@ export function validateArticleCategory(category: string): boolean {
 
 export function validateUttarakhandRegion(region: string): boolean {
   return UTTARAKHAND_REGIONS.includes(region as UttarakhandRegion);
+}
+
+// New tag validation functions
+export function validateTags(tags: string[]): boolean {
+  if (!Array.isArray(tags)) return false;
+  if (tags.length > 10) return false; // Maximum 10 tags
+  
+  return tags.every(tag => {
+    if (typeof tag !== 'string') return false;
+    const trimmedTag = tag.trim();
+    if (trimmedTag.length < 2 || trimmedTag.length > 30) return false; // Tag length between 2-30 characters
+    if (!/^[a-zA-Z0-9\s\-_]+$/.test(trimmedTag)) return false; // Only alphanumeric, spaces, hyphens, underscores
+    return true;
+  });
+}
+
+export function sanitizeTags(tags: string[]): string[] {
+  if (!Array.isArray(tags)) return [];
+  
+  return tags
+    .map(tag => tag.trim().toLowerCase())
+    .filter((tag, index, arr) => {
+      // Remove duplicates and empty tags
+      return tag.length >= 2 && tag.length <= 30 && arr.indexOf(tag) === index;
+    })
+    .slice(0, 10); // Limit to 10 tags
 }
 
 // Pagination helper
@@ -186,36 +224,3 @@ export function calculatePagination(page: number, limit: number, total: number):
     hasPrev: page > 1
   };
 }
-
-//export const ARTICLE_TABLE = `
-// CREATE TABLE articles (
-//   id             INT AUTO_INCREMENT PRIMARY KEY,
-//   author_id      INT NOT NULL,
-//   title          VARCHAR(255) NOT NULL,
-//   description    TEXT,
-//   content        LONGTEXT,
-//   category       VARCHAR(100) NOT NULL,
-//   region         VARCHAR(100),
-//   status         ENUM('draft','pending','approved','rejected') NOT NULL DEFAULT 'draft',
-//   is_top_news    BOOLEAN NOT NULL DEFAULT FALSE,
-//   publish_date   DATETIME,
-//   created_at     DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-//   updated_at     DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-//   FOREIGN KEY (author_id) REFERENCES authors(id) ON DELETE RESTRICT
-// )
-// `;
-
-// export interface Article extends RowDataPacket {
-//   id: number;
-//   author_id: number;
-//   title: string;
-//   description: string | null;
-//   content: string | null;
-//   category: string;
-//   region: string | null;
-//   status: 'draft' | 'pending' | 'approved' | 'rejected';
-//   is_top_news: boolean;
-//   publish_date: Date | null;
-//   created_at: Date;
-//   updated_at: Date;
-// }

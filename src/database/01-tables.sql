@@ -35,6 +35,7 @@ CREATE TABLE articles (
   id             INT AUTO_INCREMENT PRIMARY KEY,
   author_id      INT NOT NULL,
   title          VARCHAR(255) NOT NULL,
+  tags           JSON,
   description    TEXT,
   content        LONGTEXT,
   category       VARCHAR(100) NOT NULL,
@@ -53,30 +54,6 @@ CREATE TABLE articles (
   INDEX idx_publish_date (publish_date),
   FULLTEXT INDEX idx_search (title, content)
 );
-
-
--- ========================================
--- 3. Tags (for articles)
--- ========================================
-CREATE TABLE tags (
-  id    INT AUTO_INCREMENT PRIMARY KEY,
-  name  VARCHAR(50) NOT NULL UNIQUE
-);
-
-
--- Association table for many-to-many Article ↔ Tag
-CREATE TABLE article_tags (
-  article_id  INT NOT NULL,
-  tag_id      INT NOT NULL,
-  PRIMARY KEY (article_id, tag_id),
-  FOREIGN KEY (article_id) REFERENCES articles(id) ON DELETE CASCADE,
-  FOREIGN KEY (tag_id)     REFERENCES tags(id)     ON DELETE CASCADE
-);
-
-
-
-
--- sample article
 
 
 -- ========================================

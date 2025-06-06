@@ -10,25 +10,15 @@ VALUES
   ('editor1', 'editor1@example.com', '$2a$10$ABC123fakeAdminHash2', 'editor');
 
 
-INSERT INTO tags (name)
+
+
+INSERT INTO articles (author_id, title, description, content, category, region, status, is_top_news, publish_date, tags)
 VALUES
-  ('culture'),
-  ('heritage'),
-  ('weather'),
-  ('eco-tourism');
+  (1, 'Char Dham Yatra: Record Pilgrims in 2025', 'Massive rise in Char Dham footfall this year...', 'Full article body here...', 'Culture & Heritage', 'Uttarakhand', 'approved', TRUE, '2025-05-22 08:00:00', '["culture", "heritage"]'),
+  (2, 'Heavy Rainfall Alert for Garhwal Region', 'IMD issues orange alert for high rainfall', 'Detailed weather update...', 'Weather', 'Garhwal', 'approved', FALSE, '2025-05-22 14:30:00', '["weather"]');
 
 
-INSERT INTO articles (author_id, title, description, content, category, region, status, is_top_news, publish_date)
-VALUES
-  (1, 'Char Dham Yatra: Record Pilgrims in 2025', 'Massive rise in Char Dham footfall this year...', 'Full article body here...', 'Culture & Heritage', 'Uttarakhand', 'approved', TRUE, '2025-05-22 08:00:00'),
-  (2, 'Heavy Rainfall Alert for Garhwal Region', 'IMD issues orange alert for high rainfall', 'Detailed weather update...', 'Weather', 'Garhwal', 'approved', FALSE, '2025-05-22 14:30:00');
 
-
-INSERT INTO article_tags (article_id, tag_id)
-VALUES
-  (1, 1), -- culture
-  (1, 2), -- heritage
-  (2, 3); -- weather
 
 
 INSERT INTO web_stories (author_id, title, status, region)

@@ -13,8 +13,14 @@ services:
       - "3307:3306"
     volumes:
       - db_data:/var/lib/mysql
-      - ./src/database/tables.sql:/docker-entrypoint-initdb.d/tables.sql
-      - ./src/database/data.sql:/docker-entrypoint-initdb.d/data.sql
+      - ./src/database/01-tables.sql:/docker-entrypoint-initdb.d/01-tables.sql
+      - ./src/database/02-data.sql:/docker-entrypoint-initdb.d/02-data.sql
+    healthcheck:
+      test: ["CMD", "mysqladmin" ,"ping", "-h", "localhost", "-u$${MYSQL_USER}", "-p$${MYSQL_PASSWORD}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
 
   app:
     build:
@@ -23,7 +29,8 @@ services:
     container_name: hills-quills-backend
     restart: on-failure
     depends_on:
-      - mysql
+      mysql:
+        condition: service_healthy
     ports:
       - "3000:3000"
     environment:

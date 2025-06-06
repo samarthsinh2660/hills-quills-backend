@@ -10,7 +10,9 @@ import {
   getFromDistrictsArticles,
   getMoreStories,
   getArticlesByCategory,
-  getRecentArticles
+  getRecentArticles,
+  getPublicArticlesByTags,
+  getFeaturedArticles
 } from '../controller/public.controller.ts';
 
 const publicRouter = Router();
@@ -22,6 +24,8 @@ publicRouter.get('/articles/search', searchPublicArticles);
 publicRouter.get('/articles/trending', getPublicTrendingArticles);
 publicRouter.get('/articles/top', getTopNews);
 publicRouter.get('/articles/more-stories', getMoreStories);
+publicRouter.get('/articles/by-tags', getPublicArticlesByTags);
+publicRouter.get('/articles/featured', getFeaturedArticles);
 
 // Category-specific routes
 publicRouter.get('/articles/culture-heritage', getCultureHeritageArticles);

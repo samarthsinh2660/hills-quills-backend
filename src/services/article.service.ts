@@ -20,8 +20,8 @@ export class ArticleService {
   async createArticle(authorId: number, articleData: CreateArticleRequest): Promise<Article> {
     try {
       const query = `
-        INSERT INTO articles (author_id, title, description, content, category, region)
-        VALUES (?, ?, ?, ?, ?, ?)
+        INSERT INTO articles (author_id, title, description, content, category, region, tags)
+        VALUES (?, ?, ?, ?, ?, ?, ?)
       `;
       
       const [result] = await db.execute<OkPacket>(query, [
@@ -30,7 +30,8 @@ export class ArticleService {
         articleData.description || null,
         articleData.content,
         articleData.category,
-        articleData.region || null
+        articleData.region || null,
+        articleData.tags ? JSON.stringify(articleData.tags) : null
       ]);
       
       return await this.getArticleById(result.insertId);
@@ -58,7 +59,17 @@ export class ArticleService {
         throw ERRORS.ARTICLE_NOT_FOUND;
       }
       
-      return rows[0];
+      // Parse tags JSON if it exists
+      const article = rows[0];
+      if (article.tags) {
+        try {
+          article.tags = typeof article.tags === 'string' ? JSON.parse(article.tags) : article.tags;
+        } catch (e) {
+          article.tags = [];
+        }
+      }
+      
+      return article;
     } catch (error) {
       if (error === ERRORS.ARTICLE_NOT_FOUND) throw error;
       throw ERRORS.DATABASE_ERROR;
@@ -103,6 +114,10 @@ export class ArticleService {
         updateFields.push('region = ?');
         updateValues.push(updateData.region);
       }
+      if (updateData.tags !== undefined) {
+        updateFields.push('tags = ?');
+        updateValues.push(updateData.tags && updateData.tags.length > 0 ? JSON.stringify(updateData.tags) : null);
+      }
       
       if (updateFields.length === 0) {
         return article;
@@ -141,7 +156,6 @@ export class ArticleService {
   }
 
   // Get articles with filters and pagination
-  
   async getArticles(filters: ArticleFilters): Promise<{ articles: ArticleWithAuthor[], pagination: PaginationInfo }> {
     try {
       const conditions: string[] = [];
@@ -167,6 +181,13 @@ export class ArticleService {
       if (filters.is_top_news !== undefined) {
         conditions.push('a.is_top_news = ?');
         values.push(filters.is_top_news);
+      }
+      
+      // Handle tags filtering
+      if (filters.tags && filters.tags.length > 0) {
+        const tagConditions = filters.tags.map(() => 'JSON_CONTAINS(a.tags, JSON_QUOTE(?))').join(' OR ');
+        conditions.push(`(${tagConditions})`);
+        values.push(...filters.tags);
       }
       
       const whereClause = conditions.length > 0 ? `WHERE ${conditions.join(' AND ')}` : '';
@@ -212,12 +233,22 @@ export class ArticleService {
       
       const mainQueryValues = [...values, offset, limit];
       
-    
-      
       // Try using query instead of execute
       const [rows] = await db.query<ArticleWithAuthor[]>(query, mainQueryValues);
       
-      return { articles: rows, pagination };
+      // Parse tags for each article
+      const articlesWithParsedTags = rows.map(article => {
+        if (article.tags) {
+          try {
+            article.tags = typeof article.tags === 'string' ? JSON.parse(article.tags) : article.tags;
+          } catch (e) {
+            article.tags = [];
+          }
+        }
+        return article;
+      });
+      
+      return { articles: articlesWithParsedTags, pagination };
     } catch (error) {
       console.error('Detailed database error:', error);
       throw ERRORS.DATABASE_ERROR;
@@ -338,6 +369,13 @@ export class ArticleService {
         values.push(searchParams.region);
       }
       
+      // Handle tags filtering in search
+      if (searchParams.tags && searchParams.tags.length > 0) {
+        const tagConditions = searchParams.tags.map(() => 'JSON_CONTAINS(a.tags, JSON_QUOTE(?))').join(' OR ');
+        conditions.push(`(${tagConditions})`);
+        values.push(...searchParams.tags);
+      }
+      
       const whereClause = `WHERE ${conditions.join(' AND ')}`;
       
       // Count total
@@ -349,6 +387,7 @@ export class ArticleService {
       `;
       const [countResult] = await db.query<RowDataPacket[]>(countQuery, values);
       const total = countResult[0].total;
+      
       // Calculate pagination
       const page = searchParams.page || 1;
       const limit = Math.max(1, Math.min(100, searchParams.limit || 10));
@@ -368,7 +407,20 @@ export class ArticleService {
         LIMIT ? , ?
       `;
       const [rows] = await db.query<ArticleWithAuthor[]>(query, [...values, offset, limit]);
-      return { articles: rows, pagination };
+      
+      // Parse tags for each article
+      const articlesWithParsedTags = rows.map(article => {
+        if (article.tags) {
+          try {
+            article.tags = typeof article.tags === 'string' ? JSON.parse(article.tags) : article.tags;
+          } catch (e) {
+            article.tags = [];
+          }
+        }
+        return article;
+      });
+      
+      return { articles: articlesWithParsedTags, pagination };
     } catch (error) {
       throw ERRORS.DATABASE_ERROR;
     }
@@ -486,6 +538,7 @@ export class ArticleService {
           a.publish_date,
           a.created_at,
           a.updated_at,
+          a.tags,
           COALESCE(au.name, 'Unknown') as author_name,
           COALESCE(au.email, '') as author_email,
           ${trendingScoreQuery} as trending_score,
@@ -500,9 +553,19 @@ export class ArticleService {
       
       const [trendingRows] = await db.execute<ArticleTrending[]>(query);
       
-      // Convert ArticleTrending to ArticleWithAuthor
+      // Convert ArticleTrending to ArticleWithAuthor and parse tags
       const articles: ArticleWithAuthor[] = trendingRows.map(row => {
         const { trending_score, views_per_hour, hours_since_publish, ...article } = row;
+        
+        // Parse tags if they exist
+        if (article.tags) {
+          try {
+            article.tags = typeof article.tags === 'string' ? JSON.parse(article.tags) : article.tags;
+          } catch (e) {
+            article.tags = [];
+          }
+        }
+        
         return article;
       });
       
@@ -514,6 +577,7 @@ export class ArticleService {
       throw ERRORS.DATABASE_ERROR;
     }
   }
+
   // Increment view count
   async incrementViews(id: number): Promise<void> {
     try {

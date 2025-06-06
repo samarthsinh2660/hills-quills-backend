@@ -5,6 +5,8 @@ import { ERRORS } from '../utils/error.ts';
 import { 
   validateArticleCategory, 
   validateUttarakhandRegion,
+  validateTags,
+  sanitizeTags,
   CreateArticleRequest,
   UpdateArticleRequest,
   ArticleFilters,
@@ -17,14 +19,12 @@ const articleService = new ArticleService();
 // Create article (Authors only)
 export const createArticle = async (req: Request, res: Response) => {
   try {
-
     // Check if user is authenticated
     if (!req.user || !req.user.id) {
       throw ERRORS.NO_TOKEN_PROVIDED;
     }
 
-
-    const { title, description, content, category, region }: CreateArticleRequest = req.body;
+    const { title, description, content, category, region, tags }: CreateArticleRequest = req.body;
     
     // Validation
     if (!title || !content || !category) {
@@ -41,13 +41,24 @@ export const createArticle = async (req: Request, res: Response) => {
       res.status(400).json(errorResponse("Invalid region", 50005));
       return;
     }
+
+    // Validate and sanitize tags
+    let sanitizedTags: string[] = [];
+    if (tags && tags.length > 0) {
+      if (!validateTags(tags)) {
+        res.status(400).json(errorResponse("Invalid tags. Tags must be 2-30 characters long, maximum 10 tags allowed", 50005));
+        return;
+      }
+      sanitizedTags = sanitizeTags(tags);
+    }
     
     const article = await articleService.createArticle(req.user!.id, {
       title,
       description,
       content,
       category,
-      region
+      region,
+      tags: sanitizedTags.length > 0 ? sanitizedTags : undefined
     });
     
     res.status(201).json(successResponse(article, "Article created successfully"));
@@ -59,12 +70,22 @@ export const createArticle = async (req: Request, res: Response) => {
 // Get all articles with filters (Admin/Author dashboard)
 export const getArticles = async (req: Request, res: Response) => {
   try {
+    let tags: string[] = [];
+    if (req.query.tags) {
+      if (typeof req.query.tags === 'string') {
+        tags = req.query.tags.split(',').map(tag => tag.trim()).filter(tag => tag.length > 0);
+      } else if (Array.isArray(req.query.tags)) {
+        tags = req.query.tags.map(tag => String(tag).trim()).filter(tag => tag.length > 0);
+      }
+    }
+
     const filters: ArticleFilters = {
       status: req.query.status as any,
       category: req.query.category as string,
       region: req.query.region as string,
       author_id: req.query.author_id ? parseInt(req.query.author_id as string) : undefined,
-       is_top_news: req.query.is_top_news ? req.query.is_top_news === 'true' : undefined,
+      is_top_news: req.query.is_top_news ? req.query.is_top_news === 'true' : undefined,
+      tags: tags.length > 0 ? tags : undefined,
       page: req.query.page ? parseInt(req.query.page as string) : 1,
       limit: req.query.limit ? parseInt(req.query.limit as string) : 10,
       sortBy: req.query.sortBy as any || 'created_at',
@@ -118,6 +139,19 @@ export const updateArticle = async (req: Request, res: Response) => {
     if (updateData.region && !validateUttarakhandRegion(updateData.region)) {
       res.status(400).json(errorResponse("Invalid region", 50005));
       return;
+    }
+
+    // Validate and sanitize tags if provided
+    if (updateData.tags !== undefined) {
+      if (updateData.tags && updateData.tags.length > 0) {
+        if (!validateTags(updateData.tags)) {
+          res.status(400).json(errorResponse("Invalid tags. Tags must be 2-30 characters long, maximum 10 tags allowed", 50005));
+          return;
+        }
+        updateData.tags = sanitizeTags(updateData.tags);
+      } else {
+        updateData.tags = [];
+      }
     }
     
     const article = await articleService.updateArticle(id, req.user!.id, req.user!.is_admin, updateData);
@@ -203,10 +237,20 @@ export const unmarkTopNews = async (req: Request, res: Response) => {
 // Search articles
 export const searchArticles = async (req: Request, res: Response) => {
   try {
+    let tags: string[] = [];
+    if (req.query.tags) {
+      if (typeof req.query.tags === 'string') {
+        tags = req.query.tags.split(',').map(tag => tag.trim()).filter(tag => tag.length > 0);
+      } else if (Array.isArray(req.query.tags)) {
+        tags = req.query.tags.map(tag => String(tag).trim()).filter(tag => tag.length > 0);
+      }
+    }
+
     const searchParams: SearchParams = {
       query: req.query.query as string || '',
       category: req.query.category as string,
       region: req.query.region as string,
+      tags: tags.length > 0 ? tags : undefined,
       page: req.query.page ? parseInt(req.query.page as string) : 1,
       limit: req.query.limit ? parseInt(req.query.limit as string) : 10
     };
@@ -263,6 +307,45 @@ export const getTrendingArticles = async (req: Request, res: Response): Promise<
     const message = error.message || 'Internal server error';
     
     res.status(statusCode).json(errorResponse(message, errorCode));
+  }
+};
+
+// Get articles by tags
+export const getArticlesByTags = async (req: Request, res: Response) => {
+  try {
+    let tags: string[] = [];
+    if (req.query.tags) {
+      if (typeof req.query.tags === 'string') {
+        tags = req.query.tags.split(',').map(tag => tag.trim()).filter(tag => tag.length > 0);
+      } else if (Array.isArray(req.query.tags)) {
+        tags = req.query.tags.map(tag => String(tag).trim()).filter(tag => tag.length > 0);
+      }
+    }
+
+    if (tags.length === 0) {
+      res.status(400).json(errorResponse("At least one tag is required", 50005));
+      return;
+    }
+
+    const filters: ArticleFilters = {
+      status: req.query.status as any,
+      tags: tags,
+      page: req.query.page ? parseInt(req.query.page as string) : 1,
+      limit: req.query.limit ? parseInt(req.query.limit as string) : 10,
+      sortBy: req.query.sortBy as any || 'created_at',
+      sortOrder: req.query.sortOrder as any || 'DESC'
+    };
+
+    // Authors can only see their own articles unless admin
+    if (!req.user!.is_admin) {
+      filters.author_id = req.user!.id;
+    }
+
+    const result = await articleService.getArticles(filters);
+    
+    res.json(paginatedResponse(result.articles, result.pagination, `Articles with tags [${tags.join(', ')}] retrieved successfully`));
+  } catch (error: any) {
+    res.status(error.statusCode || 500).json(errorResponse(error.message, error.code));
   }
 };
 
