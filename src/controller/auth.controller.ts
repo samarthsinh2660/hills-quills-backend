@@ -1,7 +1,5 @@
 import { Request, Response, NextFunction } from "express";
-import { db } from "../database/db.ts";
-import { Admin } from "../models/admin.model.ts";
-import { Author } from "../models/author.model.ts";
+import { AuthRepository } from "../repositories/auth.repository.ts";
 import bcrypt from "bcryptjs";
 import {decodeRefreshToken, createAuthToken, createRefreshToken, TokenData } from "../utils/jwt.ts";
 import { ERRORS } from "../utils/error.ts";
@@ -17,10 +15,7 @@ export const signupAuthor = async (req: Request, res: Response, next: NextFuncti
         }
 
         // Check if email already exists
-        const [existingRows] = await db.query<Author[]>(
-            "SELECT id FROM authors WHERE email = ?",
-            [email]
-        );
+        const existingRows = await AuthRepository.findAuthorByEmail(email);
 
         if (existingRows.length > 0) {
             throw ERRORS.AUTHOR_EMAIL_EXISTS;
@@ -31,10 +26,13 @@ export const signupAuthor = async (req: Request, res: Response, next: NextFuncti
         const hashedPassword = await bcrypt.hash(password, saltRounds);
 
         // Insert new author
-        const [result] = await db.query(
-            `INSERT INTO authors (name, email, password_hash, about, profession, profile_photo_url) 
-             VALUES (?, ?, ?, ?, ?, ?)`,
-            [name, email, hashedPassword, about || null, profession || null, profile_photo_url || null]
+        const result = await AuthRepository.createAuthor(
+            name,
+            email,
+            hashedPassword,
+            about || null,
+            profession || null,
+            profile_photo_url || null
         );
 
         const authorId = (result as any).insertId;
@@ -76,20 +74,14 @@ export const signupAdmin = async (req: Request, res: Response, next: NextFunctio
         }
 
         // Check if username already exists
-        const [existingUsernameRows] = await db.query<Admin[]>(
-            "SELECT id FROM admins WHERE username = ?",
-            [username]
-        );
+        const existingUsernameRows = await AuthRepository.findAdminByUsername(username);
 
         if (existingUsernameRows.length > 0) {
             throw ERRORS.ADMIN_USERNAME_EXISTS;
         }
 
         // Check if email already exists
-        const [existingEmailRows] = await db.query<Admin[]>(
-            "SELECT id FROM admins WHERE email = ?",
-            [email]
-        );
+        const existingEmailRows = await AuthRepository.findAdminByEmail(email);
 
         if (existingEmailRows.length > 0) {
             throw ERRORS.ADMIN_EMAIL_EXISTS;
@@ -99,12 +91,8 @@ export const signupAdmin = async (req: Request, res: Response, next: NextFunctio
         const saltRounds = 12;
         const hashedPassword = await bcrypt.hash(password, saltRounds);
 
-        // Insert new admin (removed role field as requested)
-        const [result] = await db.query(
-            `INSERT INTO admins (username, email, password_hash) 
-             VALUES (?, ?, ?)`,
-            [username, email, hashedPassword]
-        );
+        // Insert new admin
+        const result = await AuthRepository.createAdmin(username, email, hashedPassword);
 
         const adminId = (result as any).insertId;
 
@@ -136,10 +124,7 @@ export const loginAuthor = async (req: Request, res: Response, next: NextFunctio
     const { email, password } = req.body;
 
     try {
-        const [rows] = await db.query<Author[]>(
-            "SELECT * FROM authors WHERE email = ?",
-            [email]
-        );
+        const rows = await AuthRepository.getAuthorByEmail(email);
 
         if (rows.length === 0) {
             throw ERRORS.INVALID_AUTHOR_CREDENTIALS;
@@ -161,7 +146,7 @@ export const loginAuthor = async (req: Request, res: Response, next: NextFunctio
         };
 
         const token = createAuthToken(tokenData);
-        const refreshToken = createRefreshToken(tokenData); // Added refresh token creation
+        const refreshToken = createRefreshToken(tokenData);
 
         res.status(200).json(
             successResponse({
@@ -172,7 +157,7 @@ export const loginAuthor = async (req: Request, res: Response, next: NextFunctio
                 profession: author.profession,
                 profile_photo_url: author.profile_photo_url,
                 token: token,
-                refresh_token: refreshToken, // Added refresh token to response
+                refresh_token: refreshToken,
             }, "Login successful")
         );
     } catch (error) {
@@ -184,10 +169,7 @@ export const loginAdmin = async (req: Request, res: Response, next: NextFunction
     const { email, password } = req.body;    
 
     try {
-        const [rows] = await db.query<Admin[]>(
-            "SELECT * FROM admins WHERE email = ?",
-            [email]
-        );
+        const rows = await AuthRepository.getAdminByEmail(email);
 
         if (rows.length === 0) {
             throw ERRORS.INVALID_ADMIN_CREDENTIALS;
@@ -209,7 +191,7 @@ export const loginAdmin = async (req: Request, res: Response, next: NextFunction
         };
 
         const token = createAuthToken(tokenData);
-        const refreshToken = createRefreshToken(tokenData); // Added refresh token creation
+        const refreshToken = createRefreshToken(tokenData);
 
         res.status(200).json(
             successResponse({
@@ -217,7 +199,7 @@ export const loginAdmin = async (req: Request, res: Response, next: NextFunction
                 username: admin.username,
                 email: admin.email,
                 token: token,
-                refresh_token: refreshToken, // Added refresh token to response
+                refresh_token: refreshToken,
             }, "Login successful")
         );
     } catch (error) {
@@ -255,10 +237,7 @@ export const getProfile = async (req: Request, res: Response, next: NextFunction
         const user = req.user!; // We know user exists because of auth middleware
 
         if (user.is_admin) {
-            const [rows] = await db.query<Admin[]>(
-                "SELECT id, username, email, created_at FROM admins WHERE id = ?",
-                [user.id]
-            );
+            const rows = await AuthRepository.getAdminById(user.id);
 
             if (rows.length === 0) {
                 throw ERRORS.ADMIN_NOT_FOUND;
@@ -271,10 +250,7 @@ export const getProfile = async (req: Request, res: Response, next: NextFunction
                 }, "Profile retrieved successfully")
             );
         } else {
-            const [rows] = await db.query<Author[]>(
-                "SELECT id, name, email, about, profession, profile_photo_url, created_at FROM authors WHERE id = ?",
-                [user.id]
-            );
+            const rows = await AuthRepository.getAuthorById(user.id);
 
             if (rows.length === 0) {
                 throw ERRORS.AUTHOR_NOT_FOUND;
