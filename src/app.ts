@@ -3,7 +3,6 @@ import {limiter} from './middleware/ratelimit.middleware.ts';
 import cookieParser from 'cookie-parser';
 import {PORT} from './config/env.ts';
 import { connectToDatabase } from './database/db.ts';
-import routes from './routes/index.ts';
 import Loginrouter from './routes/auth.route.ts';
 import articleRouter from './routes/articles.route.ts';
 import publicRouter from './routes/public.route.ts';
@@ -37,7 +36,6 @@ async function start() {
    })
   
    //login route
-    app.use('/api', routes);
     app.use('/api/auth', Loginrouter);
     app.use('/api/articles', articleRouter);
     app.use('/api/public', publicRouter);
