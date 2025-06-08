@@ -12,11 +12,10 @@ VALUES
 
 
 
-INSERT INTO articles (author_id, title, description, content, category, region, status, is_top_news, publish_date, tags)
+INSERT INTO articles (author_id, title, description, content, category, region, status, is_top_news, publish_date, tags, image)
 VALUES
-  (1, 'Char Dham Yatra: Record Pilgrims in 2025', 'Massive rise in Char Dham footfall this year...', 'Full article body here...', 'Culture & Heritage', 'Uttarakhand', 'approved', TRUE, '2025-05-22 08:00:00', '["culture", "heritage"]'),
-  (2, 'Heavy Rainfall Alert for Garhwal Region', 'IMD issues orange alert for high rainfall', 'Detailed weather update...', 'Weather', 'Garhwal', 'approved', FALSE, '2025-05-22 14:30:00', '["weather"]');
-
+  (1, 'Char Dham Yatra: Record Pilgrims in 2025', 'Massive rise in Char Dham footfall this year...', 'Full article body here...', 'Culture & Heritage', 'Uttarakhand', 'approved', TRUE, '2025-05-22 08:00:00', '["culture", "heritage"]', '/images/articles/char-dham-yatra.jpg'),
+  (2, 'Heavy Rainfall Alert for Garhwal Region', 'IMD issues orange alert for high rainfall', 'Detailed weather update...', 'Weather', 'Garhwal', 'approved', FALSE, '2025-05-22 14:30:00', '["weather"]', '/images/articles/rainfall-garhwal.jpg');
 
 
 

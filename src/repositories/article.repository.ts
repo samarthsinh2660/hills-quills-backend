@@ -34,8 +34,8 @@ export class ArticleRepository implements IArticleRepository {
   
   async create(authorId: number, articleData: CreateArticleRequest): Promise<Article> {
     const query = `
-      INSERT INTO articles (author_id, title, description, content, category, region, tags)
-      VALUES (?, ?, ?, ?, ?, ?, ?)
+      INSERT INTO articles (author_id, title, description, content, category, region, tags, image)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?)
     `;
     
     const [result] = await db.execute<OkPacket>(query, [
@@ -45,7 +45,8 @@ export class ArticleRepository implements IArticleRepository {
       articleData.content,
       articleData.category,
       articleData.region || null,
-      articleData.tags ? JSON.stringify(articleData.tags) : null
+      articleData.tags ? JSON.stringify(articleData.tags) : null,
+      articleData.image
     ]);
     
     const createdArticle = await this.findById(result.insertId);
@@ -104,6 +105,11 @@ export class ArticleRepository implements IArticleRepository {
     if (updateData.tags !== undefined) {
       updateFields.push('tags = ?');
       updateValues.push(updateData.tags && updateData.tags.length > 0 ? JSON.stringify(updateData.tags) : null);
+    }
+
+    if (updateData.image !== undefined) {
+      updateFields.push('image = ?');
+      updateValues.push(updateData.image);
     }
     
     if (updateFields.length === 0) {
@@ -259,7 +265,8 @@ export class ArticleRepository implements IArticleRepository {
       JOIN authors au ON a.author_id = au.id 
       ${whereClause}
     `;
-    const [countResult] = await db.query<RowDataPacket[]>(countQuery, values);
+    
+    const [countResult] = await db.execute<RowDataPacket[]>(countQuery, values);
     const total = countResult[0].total;
     
     // Calculate pagination
@@ -280,6 +287,7 @@ export class ArticleRepository implements IArticleRepository {
       ORDER BY a.publish_date DESC
       LIMIT ? , ?
     `;
+    
     const [rows] = await db.query<ArticleWithAuthor[]>(query, [...values, offset, limit]);
     
     // Parse tags for each article

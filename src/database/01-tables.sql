@@ -40,6 +40,7 @@ CREATE TABLE articles (
   content        LONGTEXT,
   category       VARCHAR(100) NOT NULL,
   region         VARCHAR(100),
+  image          VARCHAR(255),
   status         ENUM('draft','pending','approved','rejected') NOT NULL DEFAULT 'draft',
   is_top_news    BOOLEAN NOT NULL DEFAULT FALSE,
   views_count    INT NOT NULL DEFAULT 0,
@@ -100,4 +101,3 @@ CREATE TABLE ads (
   updated_at          DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   FOREIGN KEY (created_by_admin_id) REFERENCES admins(id) ON DELETE SET NULL
 );
-

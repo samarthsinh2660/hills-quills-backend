@@ -10,6 +10,7 @@ CREATE TABLE articles (
   category       VARCHAR(100) NOT NULL,
   region         VARCHAR(100),
   tags           JSON,
+  image          VARCHAR(255),
   status         ENUM('draft','pending','approved','rejected') NOT NULL DEFAULT 'draft',
   is_top_news    BOOLEAN NOT NULL DEFAULT FALSE,
   views_count    INT NOT NULL DEFAULT 0,
@@ -39,6 +40,7 @@ export interface Article extends RowDataPacket {
   category: string;
   region: string | null;
   tags: string[] | null;
+  image: string | null;
   status: 'draft' | 'pending' | 'approved' | 'rejected';
   is_top_news: boolean;
   views_count: number;
@@ -59,6 +61,7 @@ export interface CreateArticleRequest {
   category: string;
   region?: string;
   tags?: string[];
+  image: string;
 }
 
 export interface UpdateArticleRequest {
@@ -68,6 +71,7 @@ export interface UpdateArticleRequest {
   category?: string;
   region?: string;
   tags?: string[];
+  image?: string;
 }
 
 export interface ArticleFilters {

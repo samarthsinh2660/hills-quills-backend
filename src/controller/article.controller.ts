@@ -24,11 +24,17 @@ export const createArticle = async (req: Request, res: Response) => {
       throw ERRORS.NO_TOKEN_PROVIDED;
     }
 
-    const { title, description, content, category, region, tags }: CreateArticleRequest = req.body;
+    const { title, description, content, category, region, tags, image }: CreateArticleRequest = req.body;
     
     // Validation
     if (!title || !content || !category) {
       res.status(400).json(errorResponse("Title, content, and category are required", 50005));
+      return;
+    }
+    
+    // Image is required for creating new articles
+    if (!image) {
+      res.status(400).json(errorResponse("Image is required for creating articles", 50005));
       return;
     }
     
@@ -58,7 +64,8 @@ export const createArticle = async (req: Request, res: Response) => {
       content,
       category,
       region,
-      tags: sanitizedTags.length > 0 ? sanitizedTags : undefined
+      tags: sanitizedTags.length > 0 ? sanitizedTags : undefined,
+      image
     });
     
     res.status(201).json(successResponse(article, "Article created successfully"));
