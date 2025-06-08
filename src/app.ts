@@ -1,7 +1,8 @@
 import express, { Application, Request, Response } from 'express';
 import {limiter} from './middleware/ratelimit.middleware.ts';
 import cookieParser from 'cookie-parser';
-import {PORT} from './config/env.ts';
+import cors from 'cors';
+import {PORT,CORS_ORIGIN} from './config/env.ts';
 import { connectToDatabase } from './database/db.ts';
 import Loginrouter from './routes/auth.route.ts';
 import articleRouter from './routes/articles.route.ts';
@@ -16,7 +17,11 @@ async function start() {
 // Rate limiting middleware
    app.use(limiter);
 
-
+   //cors middleware
+   app.use(cors({
+    origin: CORS_ORIGIN,
+    credentials: true
+   }));
     //allow use handel send in requre it is also a middleware 
    app.use(express.json({ limit: '10mb' }));
    //process html data in to json form

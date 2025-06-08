@@ -24,3 +24,6 @@ export const DB_PORT = parseInt(process.env.DB_PORT || '3306', 10);
 // JWT: assert that these are defined
 export const JWT_SECRET = process.env.JWT_SECRET!;
 export const JWT_EXPIRES_IN = process.env.JWT_EXPIRES_IN || '1d';
+
+//cors
+export const CORS_ORIGIN = process.env.CORS_ORIGIN || 'http://localhost:3001';
