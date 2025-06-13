@@ -1,4 +1,4 @@
-import { Request, Response } from 'express';
+import { NextFunction, Request, Response } from 'express';
 import { ArticleService } from '../services/article.service.ts';
 import { successResponse, errorResponse, paginatedResponse } from '../utils/response.ts';
 import { ERRORS } from '../utils/error.ts';
@@ -447,5 +447,67 @@ export const bulkUnmarkTopNews = async (req: Request, res: Response) => {
     res.json(successResponse(null, "Articles unmarked as top news successfully"));
   } catch (error: any) {
     res.status(error.statusCode || 500).json(errorResponse(error.message, error.code));
+  }
+};
+
+export const getPendingArticles = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+      const user = req.user!;
+      
+      // Only admins can access this endpoint
+      if (!user.is_admin) {
+          throw ERRORS.UNAUTHORIZED;
+      }
+
+      const { page = 1, limit = 10 } = req.query;
+      
+      // Create filters specifically for pending articles
+      const filters = {
+          status: 'pending' as const,
+          page: parseInt(page as string),
+          limit: parseInt(limit as string),
+          sortBy: 'created_at' as const,
+          sortOrder: 'DESC' as 'DESC' | 'ASC'
+      };
+
+      const articleService = new ArticleService();
+      const result = await articleService.getArticles(filters);
+      
+      res.json(
+          successResponse({
+              articles: result.articles,
+              pagination: result.pagination
+          }, "Pending articles retrieved successfully")
+      );
+  } catch (error) {
+      next(error);
+  }
+};
+
+// Get details of a specific pending article
+export const getPendingArticleById = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+      const user = req.user!;
+      
+      // Only admins can access this endpoint
+      if (!user.is_admin) {
+          throw ERRORS.UNAUTHORIZED;
+      }
+
+      const { articleId } = req.params;
+      const articleService = new ArticleService();
+      
+      const article = await articleService.getArticleById(parseInt(articleId));
+      
+      // Verify this is actually a pending article
+      if (article.status !== 'pending') {
+          throw ERRORS.VALIDATION_ERROR;
+      }
+      
+      res.json(
+          successResponse(article, "Pending article details retrieved successfully")
+      );
+  } catch (error) {
+      next(error);
   }
 };

@@ -16,7 +16,9 @@ import {
   bulkApproveArticles,
   bulkRejectArticles,
   bulkMarkTopNews,
-  bulkUnmarkTopNews
+  bulkUnmarkTopNews,
+  getPendingArticles,
+  getPendingArticleById
 } from '../controller/article.controller.ts';
 import { authenticate, requireAdmin } from '../middleware/auth.middleware.ts';
 
@@ -27,9 +29,12 @@ articleRouter.post('/', authenticate, createArticle);
 articleRouter.get('/', authenticate, getArticles);
 articleRouter.get('/search', authenticate, searchArticles);
 articleRouter.get('/trending', authenticate, getTrendingArticles);
+articleRouter.get('/pending', authenticate, requireAdmin, getPendingArticles);
+articleRouter.get('/pending/:id', authenticate, requireAdmin, getPendingArticleById);
 articleRouter.get('/:id', authenticate, getArticleById);
 articleRouter.put('/:id', authenticate, updateArticle);
 articleRouter.delete('/:id', authenticate, deleteArticle);
+
 
 // Article Workflow Routes
 articleRouter.post('/:id/submit', authenticate, submitArticle);

@@ -8,7 +8,8 @@ import Loginrouter from './routes/auth.route.ts';
 import articleRouter from './routes/articles.route.ts';
 import publicRouter from './routes/public.route.ts';
 import { errorHandler, notFoundHandler } from './middleware/error.middleware.ts';
-
+import adminRouter from './routes/admin.route.ts';
+import authorRouter from './routes/author.route.ts';
 
 
 async function start() {
@@ -44,6 +45,8 @@ async function start() {
     app.use('/api/auth', Loginrouter);
     app.use('/api/articles', articleRouter);
     app.use('/api/public', publicRouter);
+    app.use('/api/admin', adminRouter);
+    app.use('/api/author', authorRouter);
 
 
     //erros 
