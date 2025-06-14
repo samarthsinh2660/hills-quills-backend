@@ -1,7 +1,7 @@
-INSERT INTO authors (name, about, profession, profile_photo_url, email, password_hash)
+INSERT INTO authors (name, about, profession, profile_photo_url, email, password_hash, is_active)
 VALUES
-  ('Jane Doe', 'Environmental journalist focusing on Uttarakhand', 'Journalist', '/avatars/jane.jpg', 'jane@example.com', '$2a$10$ABC123fakeHashHereJane'),
-  ('John Smith', 'Writes about Himalayan tourism and weather', 'Columnist', '/avatars/john.png', 'john@example.com', '$2a$10$ABC123fakeHashHereJohn');
+  ('Jane Doe', 'Environmental journalist focusing on Uttarakhand', 'Journalist', '/avatars/jane.jpg', 'jane@example.com', '$2a$10$ABC123fakeHashHereJane', TRUE),
+  ('John Smith', 'Writes about Himalayan tourism and weather', 'Columnist', '/avatars/john.png', 'john@example.com', '$2a$10$ABC123fakeHashHereJohn', TRUE);
 
 
 INSERT INTO admins (username, email, password_hash, role)

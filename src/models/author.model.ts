@@ -9,6 +9,7 @@ CREATE TABLE authors (
   profile_photo_url VARCHAR(255),
   email             VARCHAR(150) NOT NULL UNIQUE,
   password_hash     VARCHAR(255) NOT NULL,
+  is_active         BOOLEAN NOT NULL DEFAULT TRUE,
   created_at        DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
 )
 `;
@@ -21,5 +22,6 @@ export interface Author extends RowDataPacket {
   profile_photo_url: string | null;
   email: string;
   password_hash: string;
+  is_active: boolean;
   created_at: Date;
 }

@@ -51,9 +51,12 @@ static async findAdminByEmailExcluding(email: string, excludeId: number): Promis
 // Get all authors with pagination
 static async getAllAuthors(limit: number, offset: number): Promise<Author[]> {
     const [rows] = await db.query<Author[]>(
-        `SELECT id, name, email, about, profession, profile_photo_url, created_at 
-         FROM authors 
-         ORDER BY created_at DESC 
+        `SELECT a.id, a.name, a.email, a.about, a.profession, a.profile_photo_url, a.is_active, a.created_at,
+         COUNT(ar.id) as article_count 
+         FROM authors a
+         LEFT JOIN articles ar ON a.id = ar.author_id
+         GROUP BY a.id
+         ORDER BY a.created_at DESC 
          LIMIT ? OFFSET ?`,
         [limit, offset]
     );
@@ -64,10 +67,13 @@ static async getAllAuthors(limit: number, offset: number): Promise<Author[]> {
 static async searchAuthors(search: string, limit: number, offset: number): Promise<Author[]> {
     const searchTerm = `%${search}%`;
     const [rows] = await db.query<Author[]>(
-        `SELECT id, name, email, about, profession, profile_photo_url, created_at 
-         FROM authors 
-         WHERE name LIKE ? OR email LIKE ? OR profession LIKE ?
-         ORDER BY created_at DESC 
+        `SELECT a.id, a.name, a.email, a.about, a.profession, a.profile_photo_url, a.is_active, a.created_at,
+         COUNT(ar.id) as article_count
+         FROM authors a 
+         LEFT JOIN articles ar ON a.id = ar.author_id
+         WHERE a.name LIKE ? OR a.email LIKE ? OR a.profession LIKE ?
+         GROUP BY a.id
+         ORDER BY a.created_at DESC 
          LIMIT ? OFFSET ?`,
         [searchTerm, searchTerm, searchTerm, limit, offset]
     );
@@ -88,6 +94,33 @@ static async getAuthorsSearchCount(search: string): Promise<number> {
     const [rows] = await db.query<any[]>(
         "SELECT COUNT(*) as count FROM authors WHERE name LIKE ? OR email LIKE ? OR profession LIKE ?",
         [searchTerm, searchTerm, searchTerm]
+    );
+    return rows[0].count;
+}
+
+// Update author active status
+static async updateAuthorStatus(id: number, isActive: boolean): Promise<any> {
+    const [result] = await db.query(
+        `UPDATE authors SET is_active = ? WHERE id = ?`,
+        [isActive, id]
+    );
+    return result;
+}
+
+// Delete author
+static async deleteAuthor(id: number): Promise<any> {
+    const [result] = await db.query(
+        `DELETE FROM authors WHERE id = ?`,
+        [id]
+    );
+    return result;
+}
+
+// Check if author has articles
+static async getAuthorArticlesCount(id: number): Promise<number> {
+    const [rows] = await db.query<any[]>(
+        `SELECT COUNT(*) as count FROM articles WHERE author_id = ?`,
+        [id]
     );
     return rows[0].count;
 }

@@ -38,7 +38,7 @@ export class AuthRepository {
 
     static async getAuthorById(id: number): Promise<Author[]> {
         const [rows] = await db.query<Author[]>(
-            "SELECT id, name, email, about, profession, profile_photo_url, created_at FROM authors WHERE id = ?",
+            "SELECT id, name, email, about, profession, profile_photo_url, is_active, created_at FROM authors WHERE id = ?",
             [id]
         );
         return rows;

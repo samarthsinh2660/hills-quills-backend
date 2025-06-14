@@ -195,11 +195,93 @@ export const getAuthorById = async (req: Request, res: Response, next: NextFunct
             throw ERRORS.AUTHOR_NOT_FOUND;
         }
 
+        // Get article count for this author
+        const articleCount = await ProfileRepository.getAuthorArticlesCount(parseInt(authorId));
+
         res.json(
             successResponse({
                 ...rows[0],
+                article_count: articleCount,
                 is_admin: false
             }, "Author details retrieved successfully")
+        );
+    } catch (error) {
+        next(error);
+    }
+};
+
+// Admin can activate or deactivate an author
+export const updateAuthorStatus = async (req: Request, res: Response, next: NextFunction) => {
+    const { authorId } = req.params;
+    const { is_active } = req.body;
+    
+    try {
+        const user = req.user!;
+        
+        // Only admins can access this endpoint
+        if (!user.is_admin) {
+            throw ERRORS.UNAUTHORIZED;
+        }
+        
+        if (is_active === undefined || typeof is_active !== 'boolean') {
+            throw ERRORS.INVALID_REQUEST_BODY;
+        }
+        
+        // Check if author exists
+        const rows = await AuthRepository.getAuthorById(parseInt(authorId));
+        if (rows.length === 0) {
+            throw ERRORS.AUTHOR_NOT_FOUND;
+        }
+        
+        await ProfileRepository.updateAuthorStatus(parseInt(authorId), is_active);
+        
+        // Get article count for this author
+        const articleCount = await ProfileRepository.getAuthorArticlesCount(parseInt(authorId));
+        
+        res.json(
+            successResponse({
+                ...rows[0],
+                is_active,
+                article_count: articleCount,
+                is_admin: false
+            }, `Author has been ${is_active ? 'activated' : 'deactivated'} successfully`)
+        );
+    } catch (error) {
+        next(error);
+    }
+};
+
+// Admin can delete an author
+export const deleteAuthor = async (req: Request, res: Response, next: NextFunction) => {
+    const { authorId } = req.params;
+    
+    try {
+        const user = req.user!;
+        
+        // Only admins can access this endpoint
+        if (!user.is_admin) {
+            throw ERRORS.UNAUTHORIZED;
+        }
+        
+        // Check if author exists
+        const rows = await AuthRepository.getAuthorById(parseInt(authorId));
+        if (rows.length === 0) {
+            throw ERRORS.AUTHOR_NOT_FOUND;
+        }
+        
+        // Check if author has articles
+        const articleCount = await ProfileRepository.getAuthorArticlesCount(parseInt(authorId));
+        if (articleCount > 0) {
+            throw {
+                ...ERRORS.ARTICLE_NOT_FOUND,
+                message: "Cannot delete author with existing articles. Deactivate the author instead."
+            };
+        }
+        
+        await ProfileRepository.deleteAuthor(parseInt(authorId));
+        
+        res.json(
+            successResponse(null, "Author deleted successfully")
         );
     } catch (error) {
         next(error);
