@@ -68,6 +68,11 @@ export const ERRORS = {
     ADMIN_ONLY_ROUTE: new RequestError("Admin access required", 20007, 403),
     JWT_SECRET_NOT_CONFIGURED: new RequestError("JWT configuration error", 20008, 500),
     INSUFFICIENT_PERMISSIONS: new RequestError("Insufficient permissions", 20009, 403),
+      // New OTP related errors
+  INVALID_OTP: new RequestError ("Invalid or expired OTP",20010,400),
+  OTP_EXPIRED: new RequestError("OTP has expired",20011, 400),
+  PASSWORD_TOO_SHORT: new RequestError ("Password must be at least 6 characters long",20012,400),
+  OTP_SEND_FAILED: new RequestError ("Failed to send OTP",20013,500,),
     
     // Author Service Errors (3xxxx)
     AUTHOR_EMAIL_EXISTS: new RequestError("Author email already exists", 30001, 409),

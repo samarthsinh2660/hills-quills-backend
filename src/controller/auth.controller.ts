@@ -1,9 +1,12 @@
 import { Request, Response, NextFunction } from "express";
 import { AuthRepository } from "../repositories/auth.repository.ts";
+import { ProfileRepository } from '../repositories/profile.repository.ts';
 import bcrypt from "bcryptjs";
 import {decodeRefreshToken, createAuthToken, createRefreshToken, TokenData } from "../utils/jwt.ts";
 import { ERRORS } from "../utils/error.ts";
 import { successResponse } from "../utils/response.ts";
+import { EmailService } from "../services/email.service.ts";
+import crypto from 'crypto';
 
 export const signupAuthor = async (req: Request, res: Response, next: NextFunction) => {
     const { name, email, password, about, profession, profile_photo_url } = req.body;
@@ -267,3 +270,113 @@ export const getProfile = async (req: Request, res: Response, next: NextFunction
         next(error);
     }
 };
+
+const otpStore = new Map<string, {
+    otp: string;
+    expiresAt: Date;
+    userType: 'admin' | 'author';
+    email: string;
+  }>();
+  
+  export const sendPasswordOTP = async (req: Request, res: Response, next: NextFunction) => {
+    const { email, userType } = req.body;
+  
+    try {
+      if (!email || !userType || !['admin', 'author'].includes(userType)) {
+        throw ERRORS.INVALID_REQUEST_BODY;
+      }
+  
+      // Verify user exists
+      let user;
+      if (userType === 'admin') {
+        const rows = await AuthRepository.getAdminByEmail(email);
+        if (rows.length === 0) {
+          throw ERRORS.ADMIN_NOT_FOUND;
+        }
+        user = rows[0];
+      } else {
+        const rows = await AuthRepository.getAuthorByEmail(email);
+        if (rows.length === 0) {
+          throw ERRORS.AUTHOR_NOT_FOUND;
+        }
+        user = rows[0];
+      }
+  
+      // Generate 6-digit OTP
+      const otp = crypto.randomInt(100000, 999999).toString();
+      const expiresAt = new Date(Date.now() + 5 * 60 * 1000); // 5 minutes
+  
+      // Store OTP
+      const otpKey = `${email}_${userType}`;
+      otpStore.set(otpKey, {
+        otp,
+        expiresAt,
+        userType,
+        email
+      });
+  
+      // Send OTP via email
+      await EmailService.sendPasswordOTP(email, otp, user.username);
+  
+      res.json(
+        successResponse(
+          { message: 'OTP sent successfully' },
+          'OTP sent to your email'
+        )
+      );
+    } catch (error) {
+      next(error);
+    }
+  };
+  
+  export const verifyPasswordOTP = async (req: Request, res: Response, next: NextFunction) => {
+    const { email, otp, newPassword, userType } = req.body;
+  
+    try {
+      if (!email || !otp || !newPassword || !userType || !['admin', 'author'].includes(userType)) {
+        throw ERRORS.INVALID_REQUEST_BODY;
+      }
+  
+      if (newPassword.length < 6) {
+        throw ERRORS.PASSWORD_TOO_SHORT;
+      }
+  
+      const otpKey = `${email}_${userType}`;
+      const storedOTP = otpStore.get(otpKey);
+  
+      if (!storedOTP) {
+        throw ERRORS.INVALID_OTP;
+      }
+  
+      if (storedOTP.otp !== otp) {
+        throw ERRORS.INVALID_OTP;
+      }
+  
+      if (new Date() > storedOTP.expiresAt) {
+        otpStore.delete(otpKey);
+        throw ERRORS.OTP_EXPIRED;
+      }
+  
+      // Hash new password
+      const hashedPassword = await bcrypt.hash(newPassword, 12);
+  
+      // Update password in database
+      if (userType === 'admin') {
+        await ProfileRepository.updateAdminPassword(email, hashedPassword);
+      } else {
+        await ProfileRepository.updateAuthorPassword(email, hashedPassword);
+      }
+  
+      // Remove OTP from store
+      otpStore.delete(otpKey);
+  
+      res.json(
+        successResponse(
+          { message: 'Password changed successfully' },
+          'Password updated successfully'
+        )
+      );
+    } catch (error) {
+      next(error);
+    }
+  };

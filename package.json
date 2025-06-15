@@ -25,6 +25,7 @@
     "jsonwebtoken": "^9.0.2",
     "lru-cache": "^11.1.0",
     "mysql2": "^3.14.1",
+    "nodemailer": "^7.0.3",
     "nodemon": "^3.1.10",
     "rimraf": "^4.4.1",
     "ts-node": "^10.9.2"
@@ -37,6 +38,7 @@
     "@types/express": "^5.0.2",
     "@types/jsonwebtoken": "^9.0.9",
     "@types/node": "^22.15.21",
+    "@types/nodemailer": "^6.4.17",
     "@typescript-eslint/eslint-plugin": "^8.32.1",
     "@typescript-eslint/parser": "^8.32.1",
     "cross-env": "^7.0.3",

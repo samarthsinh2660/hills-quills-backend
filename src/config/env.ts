@@ -27,3 +27,10 @@ export const JWT_EXPIRES_IN = process.env.JWT_EXPIRES_IN || '1d';
 
 //cors
 export const CORS_ORIGIN = process.env.CORS_ORIGIN || 'http://localhost:3001';
+
+//email
+export const SMTP_HOST = process.env.SMTP_HOST || 'smtp.gmail.com';
+export const SMTP_PORT = process.env.SMTP_PORT || '587';
+export const SMTP_USER = process.env.SMTP_USER || 'priyaraval011888@gmail.com';
+export const SMTP_PASS = process.env.SMTP_PASS || 'cjnz naiz jzdm asib';
+export const FROM_EMAIL = process.env.FROM_EMAIL || 'priyaraval011888@gmail.com';

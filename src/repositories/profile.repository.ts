@@ -47,6 +47,12 @@ static async findAdminByEmailExcluding(email: string, excludeId: number): Promis
     );
     return rows;
 }
+static async updateAdminPassword(email: string, hashedPassword: string) {
+    return db.execute(
+      'UPDATE admins SET password_hash = ? WHERE email = ?',
+      [hashedPassword, email]
+    );
+  }
 
 // Get all authors with pagination
 static async getAllAuthors(limit: number, offset: number): Promise<Author[]> {
@@ -124,4 +130,10 @@ static async getAuthorArticlesCount(id: number): Promise<number> {
     );
     return rows[0].count;
 }
+static async updateAuthorPassword(email: string, hashedPassword: string) {
+    return db.execute(
+      'UPDATE authors SET password_hash = ? WHERE email = ?',
+      [hashedPassword, email]
+    );
+  }
 }
