@@ -35,9 +35,9 @@ articleRouter.get('/:id', authenticate, getArticleById);
 articleRouter.put('/:id', authenticate, updateArticle);
 articleRouter.delete('/:id', authenticate, deleteArticle);
 
-
 // Article Workflow Routes
 articleRouter.post('/:id/submit', authenticate, submitArticle);
+// Reuse submit for resubmitting rejected articles
 
 // Admin Only Routes
 const adminRouter = Router();

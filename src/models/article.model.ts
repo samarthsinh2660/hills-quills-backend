@@ -12,6 +12,7 @@ CREATE TABLE articles (
   tags           JSON,
   image          VARCHAR(255),
   status         ENUM('draft','pending','approved','rejected') NOT NULL DEFAULT 'draft',
+  rejection_reason TEXT,
   is_top_news    BOOLEAN NOT NULL DEFAULT FALSE,
   views_count    INT NOT NULL DEFAULT 0,
   publish_date   DATETIME,
@@ -42,6 +43,7 @@ export interface Article extends RowDataPacket {
   tags: string[] | null;
   image: string | null;
   status: 'draft' | 'pending' | 'approved' | 'rejected';
+  rejection_reason: string | null;
   is_top_news: boolean;
   views_count: number;
   publish_date: Date | null;

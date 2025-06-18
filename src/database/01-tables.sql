@@ -43,6 +43,7 @@ CREATE TABLE articles (
   region         VARCHAR(100),
   image          VARCHAR(255),
   status         ENUM('draft','pending','approved','rejected') NOT NULL DEFAULT 'draft',
+  rejection_reason TEXT,
   is_top_news    BOOLEAN NOT NULL DEFAULT FALSE,
   views_count    INT NOT NULL DEFAULT 0,
   publish_date   DATETIME,

@@ -20,12 +20,14 @@ export interface IArticleRepository {
   delete(id: number): Promise<void>;
   findWithFilters(filters: ArticleFilters): Promise<{ articles: ArticleWithAuthor[], pagination: PaginationInfo }>;
   updateStatus(id: number, status: string, publishDate?: boolean): Promise<void>;
+  updateStatusWithReason(id: number, status: string, reason?: string, publishDate?: boolean): Promise<void>;
   updateTopNewsStatus(id: number, isTopNews: boolean): Promise<void>;
   search(searchParams: SearchParams): Promise<{ articles: ArticleWithAuthor[], pagination: PaginationInfo }>;
-  findTrending(params: TrendingParams): Promise<{ articles: ArticleWithAuthor[], pagination: PaginationInfo }>;
+  findTrending(params: TrendingParams, authorId?: number): Promise<{ articles: ArticleWithAuthor[], pagination: PaginationInfo }>;
   incrementViewCount(id: number): Promise<void>;
   bulkDelete(ids: number[]): Promise<void>;
   bulkUpdateStatus(ids: number[], status: string, publishDate?: boolean): Promise<void>;
+  bulkUpdateStatusWithReason(ids: number[], status: string, reason?: string, publishDate?: boolean): Promise<void>;
   bulkUpdateTopNewsStatus(ids: number[], isTopNews: boolean): Promise<void>;
   checkArticlesExist(ids: number[]): Promise<boolean>;
 }
@@ -225,6 +227,27 @@ export class ArticleRepository implements IArticleRepository {
     await db.execute(query, values);
   }
 
+  async updateStatusWithReason(id: number, status: string, reason: string = '', publishDate: boolean = false): Promise<void> {
+    let query = `UPDATE articles SET status = ?`;
+    const values: any[] = [status];
+    
+    if (status === 'rejected' && reason) {
+      query += `, rejection_reason = ?`;
+      values.push(reason);
+    } else if (status !== 'rejected') {
+      query += `, rejection_reason = NULL`;
+    }
+    
+    if (publishDate) {
+      query += `, publish_date = NOW()`;
+    }
+    
+    query += ` WHERE id = ?`;
+    values.push(id);
+    
+    await db.execute(query, values);
+  }
+
   async updateTopNewsStatus(id: number, isTopNews: boolean): Promise<void> {
     const query = `UPDATE articles SET is_top_news = ? WHERE id = ?`;
     await db.execute(query, [isTopNews, id]);
@@ -299,15 +322,20 @@ export class ArticleRepository implements IArticleRepository {
     return { articles, pagination };
   }
 
-  async findTrending(params: TrendingParams): Promise<{ articles: ArticleWithAuthor[], pagination: PaginationInfo }> {
-    const timeframe = params.timeframe || 'week';
+  async findTrending(params: TrendingParams, authorId?: number): Promise<{ articles: ArticleWithAuthor[], pagination: PaginationInfo }> {
     const page = params.page || 1;
     const limit = params.limit || 10;
     const offset = (page - 1) * limit;
+    const timeframe = params.timeframe || 'week';
     
     let dateCondition = '';
     let trendingScoreQuery = '';
     
+    // Add filter by author_id if specified
+    const authorCondition = authorId ? ' AND a.author_id = ?' : '';
+    const authorValue = authorId ? [authorId] : [];
+    
+    // Set up date range based on timeframe
     switch (timeframe) {
       case 'day':
         dateCondition = 'AND COALESCE(a.publish_date, a.created_at) >= DATE_SUB(NOW(), INTERVAL 1 DAY)';
@@ -385,10 +413,10 @@ export class ArticleRepository implements IArticleRepository {
       SELECT COUNT(*) as total 
       FROM articles a 
       LEFT JOIN authors au ON a.author_id = au.id 
-      WHERE a.status = 'approved' ${dateCondition}
+      WHERE a.status = 'approved' ${dateCondition}${authorCondition}
     `;
     
-    const [countRows] = await db.execute<RowDataPacket[]>(countQuery);
+    const [countRows] = await db.execute<RowDataPacket[]>(countQuery, authorValue);
     const total = countRows[0].total;
     
     const pagination = calculatePagination(page, limit, total);
@@ -417,12 +445,12 @@ export class ArticleRepository implements IArticleRepository {
         TIMESTAMPDIFF(HOUR, COALESCE(a.publish_date, a.created_at), NOW()) as hours_since_publish
       FROM articles a 
       LEFT JOIN authors au ON a.author_id = au.id 
-      WHERE a.status = 'approved' ${dateCondition}
+      WHERE a.status = 'approved' ${dateCondition}${authorCondition}
       ORDER BY trending_score DESC
       LIMIT ${limit} OFFSET ${offset}
     `;
     
-    const [trendingRows] = await db.execute<ArticleTrending[]>(query);
+    const [trendingRows] = await db.execute<ArticleTrending[]>(query, authorValue);
     
     // Convert ArticleTrending to ArticleWithAuthor and parse tags
     const articles: ArticleWithAuthor[] = trendingRows.map(row => {
@@ -459,6 +487,34 @@ export class ArticleRepository implements IArticleRepository {
     }
     
     query += ` WHERE id IN (${placeholders}) AND status = 'pending'`;
+    values.push(...ids);
+    
+    await db.execute(query, values);
+  }
+
+  async bulkUpdateStatusWithReason(ids: number[], status: string, reason: string = '', publishDate: boolean = false): Promise<void> {
+    if (!ids.length) return;
+    
+    const placeholders = ids.map(() => '?').join(',');
+    let query = `UPDATE articles SET status = ?`;
+    const values: any[] = [status];
+    
+    if (status === 'rejected' && reason) {
+      query += `, rejection_reason = ?`;
+      values.push(reason);
+    } else if (status !== 'rejected') {
+      query += `, rejection_reason = NULL`;
+    }
+    
+    if (publishDate) {
+      query += `, publish_date = NOW()`;
+    }
+    
+    query += ` WHERE id IN (${placeholders})`;
+    if (status === 'rejected') {
+      query += ` AND status = 'pending'`;
+    }
+    
     values.push(...ids);
     
     await db.execute(query, values);

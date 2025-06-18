@@ -209,9 +209,11 @@ export const approveArticle = async (req: Request, res: Response) => {
 export const rejectArticle = async (req: Request, res: Response) => {
   try {
     const id = parseInt(req.params.id);
-    const article = await articleService.rejectArticle(id);
+    const { reason } = req.body;
     
-    res.json(successResponse(article, "Article rejected"));
+    await articleService.rejectArticle(id, reason);
+    
+    res.json(successResponse(null, "Article rejected successfully"));
   } catch (error: any) {
     res.status(error.statusCode || 500).json(errorResponse(error.message, error.code));
   }
@@ -299,24 +301,24 @@ export const getTrendingArticles = async (req: Request, res: Response): Promise<
       return;
     }
     
+    // Add authorId logic
+    const authorId = req.query.author_id ? 
+      parseInt(req.query.author_id as string) : 
+      (req.query.author_only === 'true' ? req.user?.id : undefined);
+    
     const params: TrendingParams = {
-      timeframe: (timeframe as any) || 'week',
-      page,
-      limit
+      timeframe: req.query.timeframe as any || 'week',
+      page: req.query.page ? parseInt(req.query.page as string) : 1,
+      limit: req.query.limit ? parseInt(req.query.limit as string) : 10
     };
     
-    const result = await articleService.getTrendingArticles(params);
+    const result = await articleService.getTrendingArticles(params, authorId);
     
     res.json(paginatedResponse(result.articles, result.pagination, "Trending articles retrieved successfully"));
   } catch (error: any) {
-    const statusCode = error.statusCode || 500;
-    const errorCode = error.code || 'INTERNAL_ERROR';
-    const message = error.message || 'Internal server error';
-    
-    res.status(statusCode).json(errorResponse(message, errorCode));
+    res.status(error.statusCode || 500).json(errorResponse(error.message, error.code));
   }
 };
-
 // Get articles by tags
 export const getArticlesByTags = async (req: Request, res: Response) => {
   try {
@@ -398,14 +400,14 @@ export const bulkApproveArticles = async (req: Request, res: Response) => {
 // Bulk reject articles
 export const bulkRejectArticles = async (req: Request, res: Response) => {
   try {
-    const { ids }: { ids: number[] } = req.body;
+    const { ids, reason }: { ids: number[], reason?: string } = req.body;
     
     if (!ids || !Array.isArray(ids) || ids.length === 0) {
       res.status(400).json(errorResponse("Article IDs array is required", 50005));
       return;
     }
     
-    await articleService.bulkRejectArticles(ids);
+    await articleService.bulkRejectArticles(ids, reason);
     
     res.json(successResponse(null, "Articles rejected successfully"));
     

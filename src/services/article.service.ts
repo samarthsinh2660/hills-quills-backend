@@ -78,11 +78,9 @@ export class ArticleService {
     try {
       const article = await this.getArticleById(id);
       
-      // Authorization: authors can delete draft articles, admin can delete any
-      if (!isAdmin) {
-        if (article.author_id !== userId || article.status !== 'draft') {
-          throw ERRORS.FORBIDDEN;
-        }
+      // Authorization: admin can delete any article, authors can only delete their own
+      if (!isAdmin && article.author_id !== userId) {
+        throw ERRORS.FORBIDDEN;
       }
       
       await this.articleRepository.delete(id);
@@ -111,7 +109,7 @@ export class ArticleService {
         throw ERRORS.FORBIDDEN;
       }
       
-      if (article.status !== 'draft') {
+      if (!['draft', 'rejected'].includes(article.status)) {
         throw ERRORS.VALIDATION_ERROR;
       }
       
@@ -141,7 +139,7 @@ export class ArticleService {
   }
 
   // Admin reject article
-  async rejectArticle(id: number): Promise<ArticleWithAuthor> {
+  async rejectArticle(id: number, rejectionReason?: string): Promise<ArticleWithAuthor> {
     try {
       const article = await this.getArticleById(id);
       
@@ -149,7 +147,7 @@ export class ArticleService {
         throw ERRORS.VALIDATION_ERROR;
       }
       
-      await this.articleRepository.updateStatus(id, 'rejected');
+      await this.articleRepository.updateStatusWithReason(id, 'rejected', rejectionReason || '');
       return await this.getArticleById(id);
     } catch (error) {
       if (error === ERRORS.ARTICLE_NOT_FOUND || error === ERRORS.VALIDATION_ERROR) throw error;
@@ -195,9 +193,9 @@ export class ArticleService {
   }
 
   // Get trending articles
-  async getTrendingArticles(params: TrendingParams): Promise<{ articles: ArticleWithAuthor[], pagination: PaginationInfo }> {
+  async getTrendingArticles(params: TrendingParams, authorId?: number): Promise<{ articles: ArticleWithAuthor[], pagination: PaginationInfo }> {
     try {
-      return await this.articleRepository.findTrending(params);
+      return await this.articleRepository.findTrending(params, authorId);
     } catch (error) {
       console.error('Error in getTrendingArticles:', error);
       console.error('Error stack:', error instanceof Error ? error.stack : 'No stack trace');
@@ -254,7 +252,7 @@ export class ArticleService {
   }
 
   // Bulk reject articles (admin only)
-  async bulkRejectArticles(ids: number[]): Promise<void> {
+  async bulkRejectArticles(ids: number[], rejectionReason?: string): Promise<void> {
     try {
       if (!ids.length) {
         throw ERRORS.VALIDATION_ERROR;
@@ -268,7 +266,7 @@ export class ArticleService {
       }
       
       // Now reject pending articles without throwing error if none match
-      await this.articleRepository.bulkUpdateStatus(ids, 'rejected');
+      await this.articleRepository.bulkUpdateStatusWithReason(ids, 'rejected', rejectionReason);
       
     } catch (error) {
       if (error === ERRORS.VALIDATION_ERROR || error === ERRORS.ARTICLE_NOT_FOUND) {
