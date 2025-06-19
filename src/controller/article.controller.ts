@@ -10,7 +10,6 @@ import {
   CreateArticleRequest,
   UpdateArticleRequest,
   ArticleFilters,
-  SearchParams,
   TrendingParams
 } from '../models/article.model.ts';
 
@@ -77,6 +76,17 @@ export const createArticle = async (req: Request, res: Response) => {
 // Get all articles with filters (Admin/Author dashboard)
 export const getArticles = async (req: Request, res: Response) => {
   try {
+    const userId = req.user?.id;
+    const isAdmin = req.user?.is_admin;
+    
+    // Extract query parameters
+    const status = req.query.status as string;
+    const category = req.query.category as string;
+    const region = req.query.region as string;
+    const isTopNews = req.query.is_top_news === 'true' ? true : 
+      req.query.is_top_news === 'false' ? false : undefined;
+    const search = req.query.search as string;
+
     let tags: string[] = [];
     if (req.query.tags) {
       if (typeof req.query.tags === 'string') {
@@ -85,26 +95,36 @@ export const getArticles = async (req: Request, res: Response) => {
         tags = req.query.tags.map(tag => String(tag).trim()).filter(tag => tag.length > 0);
       }
     }
-
+    
+    // Extract author_id (only admins can filter by author_id)
+    const authorId = isAdmin && req.query.author_id ? 
+      parseInt(req.query.author_id as string) : undefined;
+    
+    // Pagination and sorting
+    const page = req.query.page ? parseInt(req.query.page as string) : 1;
+    const limit = req.query.limit ? parseInt(req.query.limit as string) : 10;
+    const sortBy = req.query.sort_by as string;
+    const sortOrder = req.query.sort_order as string;
+    
     const filters: ArticleFilters = {
-      status: req.query.status as any,
-      category: req.query.category as string,
-      region: req.query.region as string,
-      author_id: req.query.author_id ? parseInt(req.query.author_id as string) : undefined,
-      is_top_news: req.query.is_top_news ? req.query.is_top_news === 'true' : undefined,
+      status: status as any,
+      category,
+      region,
+      is_top_news: isTopNews,
       tags: tags.length > 0 ? tags : undefined,
-      page: req.query.page ? parseInt(req.query.page as string) : 1,
-      limit: req.query.limit ? parseInt(req.query.limit as string) : 10,
-      sortBy: req.query.sortBy as any || 'created_at',
-      sortOrder: req.query.sortOrder as any || 'DESC'
+      page,
+      limit,
+      sortBy: sortBy as any || 'created_at',
+      sortOrder: sortOrder as any || 'DESC',
+      search,
+      // For non-admin users, only show their own articles
+      author_id: !isAdmin ? userId : authorId
     };
     
-    // Authors can only see their own articles unless admin
-    if (!req.user!.is_admin) {
-      filters.author_id = req.user!.id;
-    }
-    
-    const result = await articleService.getArticles(filters);
+    // Use findWithSearch when search parameter is provided
+    const result = search 
+      ? await articleService.findWithSearch(filters) 
+      : await articleService.getArticles(filters);
     
     res.json(paginatedResponse(result.articles, result.pagination, "Articles retrieved successfully"));
   } catch (error: any) {
@@ -238,40 +258,6 @@ export const unmarkTopNews = async (req: Request, res: Response) => {
     const article = await articleService.unmarkAsTopNews(id);
     
     res.json(successResponse(article, "Article unmarked as top news"));
-  } catch (error: any) {
-    res.status(error.statusCode || 500).json(errorResponse(error.message, error.code));
-  }
-};
-
-// Search articles
-export const searchArticles = async (req: Request, res: Response) => {
-  try {
-    let tags: string[] = [];
-    if (req.query.tags) {
-      if (typeof req.query.tags === 'string') {
-        tags = req.query.tags.split(',').map(tag => tag.trim()).filter(tag => tag.length > 0);
-      } else if (Array.isArray(req.query.tags)) {
-        tags = req.query.tags.map(tag => String(tag).trim()).filter(tag => tag.length > 0);
-      }
-    }
-
-    const searchParams: SearchParams = {
-      query: req.query.query as string || '',
-      category: req.query.category as string,
-      region: req.query.region as string,
-      tags: tags.length > 0 ? tags : undefined,
-      page: req.query.page ? parseInt(req.query.page as string) : 1,
-      limit: req.query.limit ? parseInt(req.query.limit as string) : 10
-    };
-    
-    if (!searchParams.query.trim()) {
-      res.status(400).json(errorResponse("Search query is required", 50005));
-      return;
-    }
-    
-    const result = await articleService.searchArticles(searchParams);
-    
-    res.json(paginatedResponse(result.articles, result.pagination, "Search results retrieved successfully"));
   } catch (error: any) {
     res.status(error.statusCode || 500).json(errorResponse(error.message, error.code));
   }

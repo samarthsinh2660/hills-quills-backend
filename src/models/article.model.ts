@@ -87,15 +87,7 @@ export interface ArticleFilters {
   limit?: number;
   sortBy?: 'created_at' | 'updated_at' | 'publish_date' | 'views_count' | 'title';
   sortOrder?: 'ASC' | 'DESC';
-}
-
-export interface SearchParams {
-  query: string;
-  category?: string;
-  region?: string;
-  tags?: string[];
-  page?: number;
-  limit?: number;
+  search?: string;
 }
 
 export interface TrendingParams {

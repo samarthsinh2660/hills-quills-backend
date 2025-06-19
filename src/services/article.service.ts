@@ -4,7 +4,6 @@ import {
   CreateArticleRequest, 
   UpdateArticleRequest, 
   ArticleFilters, 
-  SearchParams, 
   TrendingParams,
   PaginationInfo
 } from '../models/article.model.ts';
@@ -182,12 +181,11 @@ export class ArticleService {
       throw ERRORS.ARTICLE_UPDATE_FAILED;
     }
   }
-
-  // Search articles
-  async searchArticles(searchParams: SearchParams): Promise<{ articles: ArticleWithAuthor[], pagination: PaginationInfo }> {
+  async findWithSearch(filters: ArticleFilters): Promise<{ articles: ArticleWithAuthor[], pagination: PaginationInfo }> {
     try {
-      return await this.articleRepository.search(searchParams);
+      return await this.articleRepository.findWithFiltersAndSearch(filters);
     } catch (error) {
+      if (error === ERRORS.ARTICLE_NOT_FOUND) throw error;
       throw ERRORS.DATABASE_ERROR;
     }
   }

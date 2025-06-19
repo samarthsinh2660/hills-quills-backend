@@ -1,7 +1,7 @@
 import { Request, Response } from 'express';
 import { ArticleService } from '../services/article.service.ts';
 import { successResponse, errorResponse, paginatedResponse } from '../utils/response.ts';
-import { ArticleFilters, SearchParams, TrendingParams, validateUttarakhandRegion, validateArticleCategory } from '../models/article.model.ts';
+import { ArticleFilters, TrendingParams, validateUttarakhandRegion, validateArticleCategory } from '../models/article.model.ts';
 
 const articleService = new ArticleService();
 
@@ -130,15 +130,15 @@ export const getTopNews = async (req: Request, res: Response) => {
 // Search approved articles for public
 export const searchPublicArticles = async (req: Request, res: Response) => {
   try {
-    const query = req.query.query as string;
+    const search = req.query.query as string;
     
-    if (!query || !query.trim()) {
+    if (!search || !search.trim()) {
       res.status(400).json(errorResponse("Search query is required", 50005));
       return;
     }
 
     // Validate search query length
-    if (query.trim().length < 2) {
+    if (search.trim().length < 2) {
       res.status(400).json(errorResponse("Search query must be at least 2 characters long", 50005));
       return;
     }
@@ -180,16 +180,21 @@ export const searchPublicArticles = async (req: Request, res: Response) => {
       }
     }
 
-    const searchParams: SearchParams = {
-      query: query.trim(),
+    // Use ArticleFilters instead of SearchParams
+    const filters: ArticleFilters = {
+      status: 'approved', // Only approved articles for public
       category: category,
       region: region,
       tags: tags.length > 0 ? tags : undefined,
       page: page,
-      limit: limit
+      limit: limit,
+      search: search.trim(), // Use the consolidated search parameter
+      sortBy: 'publish_date',
+      sortOrder: 'DESC'
     };
     
-    const result = await articleService.searchArticles(searchParams);
+    // Use the findWithSearch method which supports both filtering and searching
+    const result = await articleService.findWithSearch(filters);
     
     res.json(paginatedResponse(result.articles, result.pagination, "Search results retrieved successfully"));
   } catch (error: any) {

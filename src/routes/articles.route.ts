@@ -10,7 +10,6 @@ import {
   rejectArticle,
   markTopNews,
   unmarkTopNews,
-  searchArticles,
   getTrendingArticles,
   bulkDeleteArticles,
   bulkApproveArticles,
@@ -27,7 +26,6 @@ const articleRouter = Router();
 // Author/Admin Article Management Routes
 articleRouter.post('/', authenticate, createArticle);
 articleRouter.get('/', authenticate, getArticles);
-articleRouter.get('/search', authenticate, searchArticles);
 articleRouter.get('/trending', authenticate, getTrendingArticles);
 articleRouter.get('/pending', authenticate, requireAdmin, getPendingArticles);
 articleRouter.get('/pending/:id', authenticate, requireAdmin, getPendingArticleById);

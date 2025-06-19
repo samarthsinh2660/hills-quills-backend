@@ -6,7 +6,6 @@ import {
   CreateArticleRequest, 
   UpdateArticleRequest, 
   ArticleFilters, 
-  SearchParams, 
   TrendingParams,
   calculatePagination,
   PaginationInfo,
@@ -22,7 +21,6 @@ export interface IArticleRepository {
   updateStatus(id: number, status: string, publishDate?: boolean): Promise<void>;
   updateStatusWithReason(id: number, status: string, reason?: string, publishDate?: boolean): Promise<void>;
   updateTopNewsStatus(id: number, isTopNews: boolean): Promise<void>;
-  search(searchParams: SearchParams): Promise<{ articles: ArticleWithAuthor[], pagination: PaginationInfo }>;
   findTrending(params: TrendingParams, authorId?: number): Promise<{ articles: ArticleWithAuthor[], pagination: PaginationInfo }>;
   incrementViewCount(id: number): Promise<void>;
   bulkDelete(ids: number[]): Promise<void>;
@@ -30,6 +28,7 @@ export interface IArticleRepository {
   bulkUpdateStatusWithReason(ids: number[], status: string, reason?: string, publishDate?: boolean): Promise<void>;
   bulkUpdateTopNewsStatus(ids: number[], isTopNews: boolean): Promise<void>;
   checkArticlesExist(ids: number[]): Promise<boolean>;
+  findWithFiltersAndSearch(filters: ArticleFilters): Promise<{ articles: ArticleWithAuthor[], pagination: PaginationInfo }>;
 }
 
 export class ArticleRepository implements IArticleRepository {
@@ -253,33 +252,51 @@ export class ArticleRepository implements IArticleRepository {
     await db.execute(query, [isTopNews, id]);
   }
 
-  async search(searchParams: SearchParams): Promise<{ articles: ArticleWithAuthor[], pagination: PaginationInfo }> {
-    const conditions: string[] = ['a.status = "approved"'];
+  async findWithFiltersAndSearch(filters: ArticleFilters): Promise<{ articles: ArticleWithAuthor[], pagination: PaginationInfo }> {
+    const conditions: string[] = [];
     const values: any[] = [];
+  
+    // Status filter - only apply if explicitly provided
+    if (filters.status) {
+      conditions.push('a.status = ?');
+      values.push(filters.status);
+    }
+    // No default status filter - will return articles of all statuses if not specified
     
     // Full-text search
-    if (searchParams.query) {
+    if (filters.search) {
       conditions.push('MATCH(a.title, a.content) AGAINST(? IN NATURAL LANGUAGE MODE)');
-      values.push(searchParams.query);
+      values.push(filters.search);
     }
     
-    if (searchParams.category) {
+    // Other filters
+    if (filters.category) {
       conditions.push('a.category = ?');
-      values.push(searchParams.category);
+      values.push(filters.category);
     }
-    if (searchParams.region) {
+    
+    if (filters.region) {
       conditions.push('a.region = ?');
-      values.push(searchParams.region);
+      values.push(filters.region);
     }
     
-    // Handle tags filtering in search
-    if (searchParams.tags && searchParams.tags.length > 0) {
-      const tagConditions = searchParams.tags.map(() => 'JSON_CONTAINS(a.tags, JSON_QUOTE(?))').join(' OR ');
+    if (filters.author_id) {
+      conditions.push('a.author_id = ?');
+      values.push(filters.author_id);
+    }
+    
+    if (filters.is_top_news !== undefined) {
+      conditions.push('a.is_top_news = ?');
+      values.push(filters.is_top_news ? 1 : 0);
+    }
+    
+    if (filters.tags && filters.tags.length > 0) {
+      const tagConditions = filters.tags.map(() => 'JSON_CONTAINS(a.tags, JSON_QUOTE(?))').join(' OR ');
       conditions.push(`(${tagConditions})`);
-      values.push(...searchParams.tags);
+      values.push(...filters.tags);
     }
     
-    const whereClause = `WHERE ${conditions.join(' AND ')}`;
+    const whereClause = conditions.length > 0 ? `WHERE ${conditions.join(' AND ')}` : '';
     
     // Count total
     const countQuery = `
@@ -293,10 +310,25 @@ export class ArticleRepository implements IArticleRepository {
     const total = countResult[0].total;
     
     // Calculate pagination
-    const page = searchParams.page || 1;
-    const limit = Math.max(1, Math.min(100, searchParams.limit || 10));
+    const page = filters.page || 1;
+    const limit = Math.max(1, Math.min(100, filters.limit || 10));
     const offset = Math.max(0, (page - 1) * limit);
     const pagination = calculatePagination(page, limit, total);
+    
+    // Build the ORDER BY clause
+    let orderByClause: string;
+    const orderByValues: any[] = [];
+    
+    if (filters.search) {
+      // When searching, prioritize relevance regardless of other sort parameters
+      orderByClause = 'ORDER BY MATCH(a.title, a.content) AGAINST(?) DESC';
+      orderByValues.push(filters.search);
+    } else {
+      // Default sorting when not searching
+      const sortColumn = filters.sortBy || 'created_at';
+      const sortOrder = filters.sortOrder || 'DESC';
+      orderByClause = `ORDER BY a.${sortColumn} ${sortOrder}`;
+    }
     
     // Get articles
     const query = `
@@ -307,11 +339,12 @@ export class ArticleRepository implements IArticleRepository {
       FROM articles a
       JOIN authors au ON a.author_id = au.id
       ${whereClause}
-      ORDER BY a.publish_date DESC
-      LIMIT ? , ?
+      ${orderByClause}
+      LIMIT ?, ?
     `;
     
-    const [rows] = await db.query<ArticleWithAuthor[]>(query, [...values, offset, limit]);
+    const mainQueryValues = [...values, ...orderByValues, offset, limit];
+    const [rows] = await db.query<ArticleWithAuthor[]>(query, mainQueryValues);
     
     // Parse tags for each article
     const articles = rows.map(article => {
@@ -408,12 +441,15 @@ export class ArticleRepository implements IArticleRepository {
         break;
     }
     
+    // Add condition to filter out articles with zero views
+    const viewsCondition = ' AND a.views_count > 0';
+    
     // Count total articles
     const countQuery = `
       SELECT COUNT(*) as total 
       FROM articles a 
       LEFT JOIN authors au ON a.author_id = au.id 
-      WHERE a.status = 'approved' ${dateCondition}${authorCondition}
+      WHERE a.status = 'approved' ${dateCondition}${authorCondition}${viewsCondition}
     `;
     
     const [countRows] = await db.execute<RowDataPacket[]>(countQuery, authorValue);
@@ -445,7 +481,7 @@ export class ArticleRepository implements IArticleRepository {
         TIMESTAMPDIFF(HOUR, COALESCE(a.publish_date, a.created_at), NOW()) as hours_since_publish
       FROM articles a 
       LEFT JOIN authors au ON a.author_id = au.id 
-      WHERE a.status = 'approved' ${dateCondition}${authorCondition}
+      WHERE a.status = 'approved' ${dateCondition}${authorCondition}${viewsCondition}
       ORDER BY trending_score DESC
       LIMIT ${limit} OFFSET ${offset}
     `;
