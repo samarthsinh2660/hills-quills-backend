@@ -34,3 +34,6 @@ export const SMTP_PORT = process.env.SMTP_PORT || '587';
 export const SMTP_USER = process.env.SMTP_USER || 'priyaraval011888@gmail.com';
 export const SMTP_PASS = process.env.SMTP_PASS || 'cjnz naiz jzdm asib';
 export const FROM_EMAIL = process.env.FROM_EMAIL || 'priyaraval011888@gmail.com';
+
+//IMAGE STORAGE
+export const CLOUDINARY_URL=process.env.CLOUDINARY_URL || 'cloudinary://469751937733891:OfgNlRLq-QRYbC0o6H1V_HOXfMo@daaemdtvn';
