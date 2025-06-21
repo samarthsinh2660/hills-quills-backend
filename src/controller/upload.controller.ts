@@ -2,6 +2,7 @@ import { Request, Response } from 'express';
 import cloudinary from '../services/imageUpload.service.ts';
 import { errorResponse, successResponse } from '../utils/response.ts';
 import { Readable } from 'stream';
+import { ERRORS } from '../utils/error.ts';
 
 // Helper function to upload buffer to Cloudinary
 const uploadToCloudinary = async (fileBuffer: Buffer, folder: string): Promise<{ url: string, public_id: string }> => {
@@ -22,7 +23,7 @@ const uploadToCloudinary = async (fileBuffer: Buffer, folder: string): Promise<{
       },
       (error, result) => {
         if (error) {
-          return reject(error);
+          return reject(ERRORS.CLOUDINARY_UPLOAD_ERROR);
         }
         
         return resolve({ 
@@ -42,7 +43,7 @@ export const uploadImage = async (req: Request, res: Response) => {
   try {
     // Check if file exists in request
     if (!req.file) {
-      res.status(400).json(errorResponse('No file uploaded', 50010));
+      res.status(ERRORS.NO_FILE_UPLOADED.statusCode).json(errorResponse(ERRORS.NO_FILE_UPLOADED.message, ERRORS.NO_FILE_UPLOADED.code));
       return;
     }
 
@@ -61,7 +62,11 @@ export const uploadImage = async (req: Request, res: Response) => {
     return;
   } catch (error: any) {
     console.error('Upload error:', error);
-    res.status(500).json(errorResponse('Image upload failed', 50011));
+    
+    // Use the standardized error if it's a RequestError, otherwise use a generic error
+    const errorToReturn = error.code ? error : ERRORS.IMAGE_UPLOAD_FAILED;
+    
+    res.status(errorToReturn.statusCode).json(errorResponse(errorToReturn.message, errorToReturn.code));
     return;
   }
 };

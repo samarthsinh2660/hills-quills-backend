@@ -125,6 +125,9 @@ export const ERRORS = {
     FILE_PROCESSING_FAILED: new RequestError("File processing failed", 70005, 500),
     INVALID_IMAGE_FORMAT: new RequestError("Invalid image format", 70006, 400),
     FILE_STORAGE_ERROR: new RequestError("File storage error", 70007, 500),
+    NO_FILE_UPLOADED: new RequestError("No file uploaded", 70008, 400),
+    IMAGE_UPLOAD_FAILED: new RequestError("Image upload failed", 70009, 500),
+    CLOUDINARY_UPLOAD_ERROR: new RequestError("Cloudinary upload failed", 70010, 500),
 };
 
 // Helper function to check if error is a RequestError
