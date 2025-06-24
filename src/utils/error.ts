@@ -43,6 +43,7 @@ Error Code Convention:
 - 5xxxx: Content/Article service errors
 - 6xxxx: Web Story service errors
 - 7xxxx: File/Media service errors
+- 8xxxx: Advertisement service errors
 */
 
 export const ERRORS = {
@@ -128,6 +129,15 @@ export const ERRORS = {
     NO_FILE_UPLOADED: new RequestError("No file uploaded", 70008, 400),
     IMAGE_UPLOAD_FAILED: new RequestError("Image upload failed", 70009, 500),
     CLOUDINARY_UPLOAD_ERROR: new RequestError("Cloudinary upload failed", 70010, 500),
+    
+    // Advertisement Service Errors (8xxxx)
+    AD_NOT_FOUND: new RequestError("Advertisement not found", 80001, 404),
+    AD_CREATION_FAILED: new RequestError("Failed to create advertisement", 80002, 500),
+    AD_UPDATE_FAILED: new RequestError("Failed to update advertisement", 80003, 500),
+    AD_DELETE_FAILED: new RequestError("Failed to delete advertisement", 80004, 500),
+    INVALID_AD_DATA: new RequestError("Invalid advertisement data", 80005, 400),
+    AD_PERMISSION_DENIED: new RequestError("Permission denied for this advertisement", 80006, 403),
+    INVALID_AD_TYPE: new RequestError("Invalid advertisement type", 80007, 400),
 };
 
 // Helper function to check if error is a RequestError

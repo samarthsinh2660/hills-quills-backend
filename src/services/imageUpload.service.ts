@@ -20,7 +20,7 @@ const extractCredentials = (cloudinaryUrl: string) => {
   }
 };
 
-const { apiKey, apiSecret, cloudName } = extractCredentials(CLOUDINARY_URL);
+const { apiKey, apiSecret, cloudName } = extractCredentials(CLOUDINARY_URL!);
 
 // Configure Cloudinary
 cloudinary.config({

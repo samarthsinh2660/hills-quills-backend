@@ -49,17 +49,39 @@ export const uploadImage = async (req: Request, res: Response) => {
 
     // Determine folder based on upload type
     const uploadType = req.body.type || 'article'; // Default to 'article' if not specified
-    const folder = uploadType === 'profile' ? 'hills-quills/profiles' : 'hills-quills/articles';
+    
+    let folder;
+    switch (uploadType) {
+      case 'profile':
+        folder = 'hills-quills/profiles';
+        break;
+      case 'article':
+        folder = 'hills-quills/articles';
+        break;
+      case 'webstory':
+        folder = 'hills-quills/webstories';
+        break;
+      case 'slide':
+        folder = 'hills-quills/webstories/slides';
+        break;
+      case 'ad':
+        folder = 'hills-quills/ads';
+        break;
+      default:
+        folder = 'hills-quills/articles'; // Default fallback
+    }
 
     // Upload file to Cloudinary
     const result = await uploadToCloudinary(req.file.buffer, folder);
 
-    // Return the Cloudinary URL
+    // Return the Cloudinary URL and additional metadata
     res.status(200).json(successResponse({
       url: result.url,
-      public_id: result.public_id
+      public_id: result.public_id,
+      type: uploadType,
+      folder: folder
     }, 'Image uploaded successfully'));
-    return;
+    
   } catch (error: any) {
     console.error('Upload error:', error);
     
@@ -67,6 +89,5 @@ export const uploadImage = async (req: Request, res: Response) => {
     const errorToReturn = error.code ? error : ERRORS.IMAGE_UPLOAD_FAILED;
     
     res.status(errorToReturn.statusCode).json(errorResponse(errorToReturn.message, errorToReturn.code));
-    return;
   }
 };
