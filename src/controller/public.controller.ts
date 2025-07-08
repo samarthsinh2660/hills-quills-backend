@@ -46,6 +46,10 @@ export const getPublicArticles = async (req: Request, res: Response) => {
       return;
     }
 
+    // Type-safe sort parameters
+    const sortBy = req.query.sortBy as ArticleFilters['sortBy'] || 'publish_date';
+    const sortOrder = req.query.sortOrder as ArticleFilters['sortOrder'] || 'DESC';
+
     const filters: ArticleFilters = {
       status: 'approved', // Only approved articles
       category: category,
@@ -55,15 +59,17 @@ export const getPublicArticles = async (req: Request, res: Response) => {
       tags: tags.length > 0 ? tags : undefined,
       page: page,
       limit: limit,
-      sortBy: req.query.sortBy as any || 'publish_date',
-      sortOrder: req.query.sortOrder as any || 'DESC'
+      sortBy: sortBy,
+      sortOrder: sortOrder
     };
     
     const result = await articleService.getArticles(filters);
     
     res.json(paginatedResponse(result.articles, result.pagination, "Articles retrieved successfully"));
-  } catch (error: any) {
-    res.status(error.statusCode || 500).json(errorResponse(error.message, error.code));
+  } catch (error: unknown) {
+    const errorObj = error as { statusCode?: number; code?: string | number; message: string };
+    const errorCode = typeof errorObj.code === 'number' ? errorObj.code : (errorObj.code ? parseInt(errorObj.code) || 10000 : 10000);
+    res.status(errorObj.statusCode || 500).json(errorResponse(errorObj.message, errorCode));
   }
 };
 
@@ -89,8 +95,10 @@ export const getPublicArticleById = async (req: Request, res: Response) => {
     await articleService.incrementViews(id);
     
     res.json(successResponse(article, "Article retrieved successfully"));
-  } catch (error: any) {
-    res.status(error.statusCode || 500).json(errorResponse(error.message, error.code));
+  } catch (error: unknown) {
+    const errorObj = error as { statusCode?: number; code?: string | number; message: string };
+    const errorCode = typeof errorObj.code === 'number' ? errorObj.code : (errorObj.code ? parseInt(errorObj.code) || 10000 : 10000);
+    res.status(errorObj.statusCode || 500).json(errorResponse(errorObj.message, errorCode));
   }
 };
 
@@ -122,8 +130,10 @@ export const getTopNews = async (req: Request, res: Response) => {
     const result = await articleService.getArticles(filters);
     
     res.json(paginatedResponse(result.articles, result.pagination, "Top news retrieved successfully"));
-  } catch (error: any) {
-    res.status(error.statusCode || 500).json(errorResponse(error.message, error.code));
+  } catch (error: unknown) {
+    const errorObj = error as { statusCode?: number; code?: string | number; message: string };
+    const errorCode = typeof errorObj.code === 'number' ? errorObj.code : (errorObj.code ? parseInt(errorObj.code) || 10000 : 10000);
+    res.status(errorObj.statusCode || 500).json(errorResponse(errorObj.message, errorCode));
   }
 };
 
@@ -197,8 +207,10 @@ export const searchPublicArticles = async (req: Request, res: Response) => {
     const result = await articleService.findWithSearch(filters);
     
     res.json(paginatedResponse(result.articles, result.pagination, "Search results retrieved successfully"));
-  } catch (error: any) {
-    res.status(error.statusCode || 500).json(errorResponse(error.message, error.code));
+  } catch (error: unknown) {
+    const errorObj = error as { statusCode?: number; code?: string | number; message: string };
+    const errorCode = typeof errorObj.code === 'number' ? errorObj.code : (errorObj.code ? parseInt(errorObj.code) || 10000 : 10000);
+    res.status(errorObj.statusCode || 500).json(errorResponse(errorObj.message, errorCode));
   }
 };
 
@@ -227,16 +239,19 @@ export const getPublicTrendingArticles = async (req: Request, res: Response) => 
     }
 
     const params: TrendingParams = {
-      timeframe: (timeframe as any) || 'week',
+      timeframe: (timeframe as TrendingParams['timeframe']) || 'week',
       page: page,
       limit: limit
     };
     
     const result = await articleService.getTrendingArticles(params);
     
+    
     res.json(paginatedResponse(result.articles, result.pagination, "Trending articles retrieved successfully"));
-  } catch (error: any) {
-    res.status(error.statusCode || 500).json(errorResponse(error.message, error.code));
+  } catch (error: unknown) {
+    const errorObj = error as { statusCode?: number; code?: string | number; message: string };
+    const errorCode = typeof errorObj.code === 'number' ? errorObj.code : (errorObj.code ? parseInt(errorObj.code) || 10000 : 10000);
+    res.status(errorObj.statusCode || 500).json(errorResponse(errorObj.message, errorCode));
   }
 };
 
@@ -275,8 +290,10 @@ export const getArticlesByRegion = async (req: Request, res: Response) => {
     const result = await articleService.getArticles(filters);
     
     res.json(paginatedResponse(result.articles, result.pagination, `Articles from ${region} retrieved successfully`));
-  } catch (error: any) {
-    res.status(error.statusCode || 500).json(errorResponse(error.message, error.code));
+  } catch (error: unknown) {
+    const errorObj = error as { statusCode?: number; code?: string | number; message: string };
+    const errorCode = typeof errorObj.code === 'number' ? errorObj.code : (errorObj.code ? parseInt(errorObj.code) || 10000 : 10000);
+    res.status(errorObj.statusCode || 500).json(errorResponse(errorObj.message, errorCode));
   }
 };
 
@@ -315,8 +332,10 @@ export const getArticlesByCategory = async (req: Request, res: Response) => {
     const result = await articleService.getArticles(filters);
     
     res.json(paginatedResponse(result.articles, result.pagination, `${category} articles retrieved successfully`));
-  } catch (error: any) {
-    res.status(error.statusCode || 500).json(errorResponse(error.message, error.code));
+  } catch (error: unknown) {
+    const errorObj = error as { statusCode?: number; code?: string | number; message: string };
+    const errorCode = typeof errorObj.code === 'number' ? errorObj.code : (errorObj.code ? parseInt(errorObj.code) || 10000 : 10000);
+    res.status(errorObj.statusCode || 500).json(errorResponse(errorObj.message, errorCode));
   }
 };
 
@@ -348,8 +367,10 @@ export const getCultureHeritageArticles = async (req: Request, res: Response) =>
     const result = await articleService.getArticles(filters);
     
     res.json(paginatedResponse(result.articles, result.pagination, "Culture & Heritage articles retrieved successfully"));
-  } catch (error: any) {
-    res.status(error.statusCode || 500).json(errorResponse(error.message, error.code));
+  } catch (error: unknown) {
+    const errorObj = error as { statusCode?: number; code?: string | number; message: string };
+    const errorCode = typeof errorObj.code === 'number' ? errorObj.code : (errorObj.code ? parseInt(errorObj.code) || 10000 : 10000);
+    res.status(errorObj.statusCode || 500).json(errorResponse(errorObj.message, errorCode));
   }
 };
 
@@ -394,8 +415,10 @@ export const getFromDistrictsArticles = async (req: Request, res: Response) => {
       : "From Districts articles retrieved successfully";
     
     res.json(paginatedResponse(result.articles, result.pagination, message));
-  } catch (error: any) {
-    res.status(error.statusCode || 500).json(errorResponse(error.message, error.code));
+  } catch (error: unknown) {
+    const errorObj = error as { statusCode?: number; code?: string | number; message: string };
+    const errorCode = typeof errorObj.code === 'number' ? errorObj.code : (errorObj.code ? parseInt(errorObj.code) || 10000 : 10000);
+    res.status(errorObj.statusCode || 500).json(errorResponse(errorObj.message, errorCode));
   }
 };
 
@@ -426,8 +449,10 @@ export const getMoreStories = async (req: Request, res: Response) => {
     const result = await articleService.getArticles(filters);
     
     res.json(paginatedResponse(result.articles, result.pagination, "More stories retrieved successfully"));
-  } catch (error: any) {
-    res.status(error.statusCode || 500).json(errorResponse(error.message, error.code));
+  } catch (error: unknown) {
+    const errorObj = error as { statusCode?: number; code?: string | number; message: string };
+    const errorCode = typeof errorObj.code === 'number' ? errorObj.code : (errorObj.code ? parseInt(errorObj.code) || 10000 : 10000);
+    res.status(errorObj.statusCode || 500).json(errorResponse(errorObj.message, errorCode));
   }
 };
 
@@ -452,8 +477,10 @@ export const getRecentArticles = async (req: Request, res: Response) => {
     const result = await articleService.getArticles(filters);
     
     res.json(successResponse(result.articles, "Recent articles retrieved successfully"));
-  } catch (error: any) {
-    res.status(error.statusCode || 500).json(errorResponse(error.message, error.code));
+  } catch (error: unknown) {
+    const errorObj = error as { statusCode?: number; code?: string | number; message: string };
+    const errorCode = typeof errorObj.code === 'number' ? errorObj.code : (errorObj.code ? parseInt(errorObj.code) || 10000 : 10000);
+    res.status(errorObj.statusCode || 500).json(errorResponse(errorObj.message, errorCode));
   }
 };
 
@@ -487,20 +514,26 @@ export const getPublicArticlesByTags = async (req: Request, res: Response) => {
       return;
     }
 
+    // Type-safe sort parameters
+    const sortBy = req.query.sortBy as ArticleFilters['sortBy'] || 'publish_date';
+    const sortOrder = req.query.sortOrder as ArticleFilters['sortOrder'] || 'DESC';
+
     const filters: ArticleFilters = {
       status: 'approved', // Only approved articles for public
       tags: tags,
       page: page,
       limit: limit,
-      sortBy: req.query.sortBy as any || 'publish_date',
-      sortOrder: req.query.sortOrder as any || 'DESC'
+      sortBy: sortBy,
+      sortOrder: sortOrder
     };
 
     const result = await articleService.getArticles(filters);
     
     res.json(paginatedResponse(result.articles, result.pagination, `Articles with tags [${tags.join(', ')}] retrieved successfully`));
-  } catch (error: any) {
-    res.status(error.statusCode || 500).json(errorResponse(error.message, error.code));
+  } catch (error: unknown) {
+    const errorObj = error as { statusCode?: number; code?: string | number; message: string };
+    const errorCode = typeof errorObj.code === 'number' ? errorObj.code : (errorObj.code ? parseInt(errorObj.code) || 10000 : 10000);
+    res.status(errorObj.statusCode || 500).json(errorResponse(errorObj.message, errorCode));
   }
 };
 
@@ -524,7 +557,7 @@ export const getFeaturedArticles = async (req: Request, res: Response) => {
       sortOrder: 'DESC'
     };
     
-    let result = await articleService.getArticles(topNewsFilters);
+    const result = await articleService.getArticles(topNewsFilters);
     
     // If not enough top news, supplement with high view count articles
     if (result.articles.length < limit) {
@@ -547,7 +580,9 @@ export const getFeaturedArticles = async (req: Request, res: Response) => {
     }
     
     res.json(successResponse(result.articles.slice(0, limit), "Featured articles retrieved successfully"));
-  } catch (error: any) {
-    res.status(error.statusCode || 500).json(errorResponse(error.message, error.code));
+  } catch (error: unknown) {
+    const errorObj = error as { statusCode?: number; code?: string | number; message: string };
+    const errorCode = typeof errorObj.code === 'number' ? errorObj.code : (errorObj.code ? parseInt(errorObj.code) || 10000 : 10000);
+    res.status(errorObj.statusCode || 500).json(errorResponse(errorObj.message, errorCode));
   }
 };

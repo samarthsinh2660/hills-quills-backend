@@ -266,7 +266,7 @@ export class ArticleService {
       // Now reject pending articles without throwing error if none match
       await this.articleRepository.bulkUpdateStatusWithReason(ids, 'rejected', rejectionReason);
       
-    } catch (error) {
+    } catch (error: any) {
       if (error === ERRORS.VALIDATION_ERROR || error === ERRORS.ARTICLE_NOT_FOUND) {
         throw error;
       }
@@ -282,7 +282,7 @@ export class ArticleService {
       }
 
       await this.articleRepository.bulkUpdateTopNewsStatus(ids, true);
-    } catch (error) {
+    } catch (error: any) {
       throw ERRORS.ARTICLE_UPDATE_FAILED;
     }
   }
@@ -295,7 +295,7 @@ export class ArticleService {
       }
 
       await this.articleRepository.bulkUpdateTopNewsStatus(ids, false);
-    } catch (error) {
+    } catch (error: any) {
       throw ERRORS.ARTICLE_UPDATE_FAILED;
     }
   }

@@ -474,6 +474,7 @@ export class ArticleRepository implements IArticleRepository {
         a.created_at,
         a.updated_at,
         a.tags,
+        a.image,
         COALESCE(au.name, 'Unknown') as author_name,
         COALESCE(au.email, '') as author_email,
         ${trendingScoreQuery} as trending_score,

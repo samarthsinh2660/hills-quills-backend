@@ -5,7 +5,7 @@ import { SMTP_HOST, SMTP_PORT, SMTP_USER, SMTP_PASS, FROM_EMAIL } from '../confi
 export class EmailService {
   private static transporter = nodemailer.createTransport({
     host: SMTP_HOST,
-    port: parseInt(SMTP_PORT),
+    port: parseInt(SMTP_PORT!),
     secure: false,
     auth: {
       user: SMTP_USER,
