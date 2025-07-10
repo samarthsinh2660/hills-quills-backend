@@ -54,6 +54,9 @@ export interface Article extends RowDataPacket {
 export interface ArticleWithAuthor extends Article {
   author_name: string;
   author_email: string;
+  author_profile_photo_url: string;
+  author_about: string;
+  author_profession: string;
 }
 
 export interface CreateArticleRequest {

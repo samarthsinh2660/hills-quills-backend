@@ -22,6 +22,7 @@ export interface IArticleRepository {
   updateStatusWithReason(id: number, status: string, reason?: string, publishDate?: boolean): Promise<void>;
   updateTopNewsStatus(id: number, isTopNews: boolean): Promise<void>;
   findTrending(params: TrendingParams, authorId?: number): Promise<{ articles: ArticleWithAuthor[], pagination: PaginationInfo }>;
+  findTrendingTags(params: TrendingParams): Promise<string[]>;
   incrementViewCount(id: number): Promise<void>;
   bulkDelete(ids: number[]): Promise<void>;
   bulkUpdateStatus(ids: number[], status: string, publishDate?: boolean): Promise<void>;
@@ -62,7 +63,10 @@ export class ArticleRepository implements IArticleRepository {
       SELECT 
         a.*,
         au.name as author_name,
-        au.email as author_email
+        au.email as author_email,
+        au.profile_photo_url,
+        au.about as author_about,
+        au.profession
       FROM articles a
       JOIN authors au ON a.author_id = au.id
       WHERE a.id = ?
@@ -497,6 +501,136 @@ export class ArticleRepository implements IArticleRepository {
     });
     
     return { articles, pagination };
+  }
+
+  async findTrendingTags(params: TrendingParams): Promise<string[]> {
+    const timeframe = params.timeframe || 'week';
+    
+    let dateCondition = '';
+    let trendingScoreQuery = '';
+    
+    // Set up date range based on timeframe (same logic as findTrending)
+    switch (timeframe) {
+      case 'day':
+        dateCondition = 'AND COALESCE(a.publish_date, a.created_at) >= DATE_SUB(NOW(), INTERVAL 1 DAY)';
+        trendingScoreQuery = `
+          (
+            (a.views_count * 0.9) +
+            (a.views_count / GREATEST(TIMESTAMPDIFF(HOUR, COALESCE(a.publish_date, a.created_at), NOW()), 1) * 50) +
+            (CASE 
+              WHEN COALESCE(a.publish_date, a.created_at) >= DATE_SUB(NOW(), INTERVAL 1 HOUR) THEN (a.views_count * 0.6)
+              WHEN COALESCE(a.publish_date, a.created_at) >= DATE_SUB(NOW(), INTERVAL 3 HOUR) THEN (a.views_count * 0.5)
+              WHEN COALESCE(a.publish_date, a.created_at) >= DATE_SUB(NOW(), INTERVAL 6 HOUR) THEN (a.views_count * 0.4)
+              WHEN COALESCE(a.publish_date, a.created_at) >= DATE_SUB(NOW(), INTERVAL 12 HOUR) THEN (a.views_count * 0.3)
+              ELSE 0 
+            END) +
+            (CASE 
+              WHEN TIMESTAMPDIFF(HOUR, COALESCE(a.publish_date, a.created_at), NOW()) >= 1 
+              THEN (a.views_count / TIMESTAMPDIFF(HOUR, COALESCE(a.publish_date, a.created_at), NOW()) * 10)
+              ELSE 0
+            END)
+          )
+        `;
+        break;
+        
+      case 'week':
+        dateCondition = 'AND COALESCE(a.publish_date, a.created_at) >= DATE_SUB(NOW(), INTERVAL 1 WEEK)';
+        trendingScoreQuery = `
+          (
+            (a.views_count * 0.8) +
+            (a.views_count / GREATEST(TIMESTAMPDIFF(DAY, COALESCE(a.publish_date, a.created_at), NOW()), 1) * 20) +
+            (CASE 
+              WHEN COALESCE(a.publish_date, a.created_at) >= DATE_SUB(NOW(), INTERVAL 1 DAY) THEN (a.views_count * 0.4)
+              WHEN COALESCE(a.publish_date, a.created_at) >= DATE_SUB(NOW(), INTERVAL 2 DAY) THEN (a.views_count * 0.3)
+              WHEN COALESCE(a.publish_date, a.created_at) >= DATE_SUB(NOW(), INTERVAL 3 DAY) THEN (a.views_count * 0.2)
+              WHEN COALESCE(a.publish_date, a.created_at) >= DATE_SUB(NOW(), INTERVAL 5 DAY) THEN (a.views_count * 0.1)
+              ELSE 0 
+            END) +
+            (CASE 
+              WHEN TIMESTAMPDIFF(DAY, COALESCE(a.publish_date, a.created_at), NOW()) >= 2 
+              THEN (a.views_count / TIMESTAMPDIFF(DAY, COALESCE(a.publish_date, a.created_at), NOW()) * 5)
+              ELSE 0
+            END)
+          )
+        `;
+        break;
+        
+      case 'month':
+        dateCondition = 'AND COALESCE(a.publish_date, a.created_at) >= DATE_SUB(NOW(), INTERVAL 1 MONTH)';
+        trendingScoreQuery = `
+          (
+            (a.views_count * 0.6) +
+            (a.views_count / GREATEST(TIMESTAMPDIFF(WEEK, COALESCE(a.publish_date, a.created_at), NOW()), 1) * 10) +
+            (CASE 
+              WHEN COALESCE(a.publish_date, a.created_at) >= DATE_SUB(NOW(), INTERVAL 3 DAY) THEN (a.views_count * 0.2)
+              WHEN COALESCE(a.publish_date, a.created_at) >= DATE_SUB(NOW(), INTERVAL 1 WEEK) THEN (a.views_count * 0.15)
+              WHEN COALESCE(a.publish_date, a.created_at) >= DATE_SUB(NOW(), INTERVAL 2 WEEK) THEN (a.views_count * 0.1)
+              ELSE 0 
+            END) +
+            (CASE 
+              WHEN TIMESTAMPDIFF(WEEK, COALESCE(a.publish_date, a.created_at), NOW()) >= 1 
+              THEN (a.views_count / TIMESTAMPDIFF(WEEK, COALESCE(a.publish_date, a.created_at), NOW()) * 3)
+              ELSE 0
+            END)
+          )
+        `;
+        break;
+        
+      default:
+        dateCondition = 'AND COALESCE(a.publish_date, a.created_at) >= DATE_SUB(NOW(), INTERVAL 1 WEEK)';
+        trendingScoreQuery = `(a.views_count * 1.0)`;
+        break;
+    }
+    
+    // Add condition to filter out articles with zero views
+    const viewsCondition = ' AND a.views_count > 0';
+    
+    // Query to get tags from trending articles
+    const query = `
+      SELECT DISTINCT a.tags,
+        ${trendingScoreQuery} as trending_score
+      FROM articles a 
+      WHERE a.status = 'approved' 
+        AND a.tags IS NOT NULL 
+        AND a.tags != 'null' 
+        AND a.tags != '[]' 
+        ${dateCondition}${viewsCondition}
+      ORDER BY trending_score DESC
+      LIMIT 100
+    `;
+    
+    const [rows] = await db.execute<RowDataPacket[]>(query);
+    
+    // Extract and flatten all tags from trending articles
+    const allTags: string[] = [];
+    const tagCounts: { [key: string]: number } = {};
+    
+    rows.forEach(row => {
+      if (row.tags) {
+        try {
+          const tags = typeof row.tags === 'string' ? JSON.parse(row.tags) : row.tags;
+          if (Array.isArray(tags)) {
+            tags.forEach(tag => {
+              if (typeof tag === 'string' && tag.trim()) {
+                const trimmedTag = tag.trim();
+                if (!tagCounts[trimmedTag]) {
+                  tagCounts[trimmedTag] = 0;
+                  allTags.push(trimmedTag);
+                }
+                tagCounts[trimmedTag]++;
+              }
+            });
+          }
+        } catch (e) {
+          // Skip invalid JSON
+        }
+      }
+    });
+    
+    // Sort tags by frequency and return unique tags
+    return allTags
+      .sort((a, b) => tagCounts[b] - tagCounts[a])
+      .slice(0, 50); // Limit to top 50 trending tags
   }
 
   async incrementViewCount(id: number): Promise<void> {

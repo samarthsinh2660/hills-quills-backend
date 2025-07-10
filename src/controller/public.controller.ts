@@ -255,6 +255,31 @@ export const getPublicTrendingArticles = async (req: Request, res: Response) => 
   }
 };
 
+// Get trending tags for public
+export const getTrendingTags = async (req: Request, res: Response) => {
+  try {
+    const validTimeframes = ['day', 'week', 'month'];
+    const timeframe = req.query.timeframe as string;
+    
+    if (timeframe && !validTimeframes.includes(timeframe)) {
+      res.status(400).json(errorResponse('Invalid timeframe. Must be one of: day, week, month', 50005));
+      return;
+    }
+
+    const params: TrendingParams = {
+      timeframe: (timeframe as TrendingParams['timeframe']) || 'week'
+    };
+    
+    const tags = await articleService.getTrendingTags(params);
+    
+    res.json(successResponse(tags, "Trending tags retrieved successfully"));
+  } catch (error: unknown) {
+    const errorObj = error as { statusCode?: number; code?: string | number; message: string };
+    const errorCode = typeof errorObj.code === 'number' ? errorObj.code : (errorObj.code ? parseInt(errorObj.code) || 10000 : 10000);
+    res.status(errorObj.statusCode || 500).json(errorResponse(errorObj.message, errorCode));
+  }
+};
+
 // Get articles by region for public
 export const getArticlesByRegion = async (req: Request, res: Response) => {
   try {

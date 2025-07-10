@@ -5,6 +5,7 @@ import {
   getTopNews,
   searchPublicArticles,
   getPublicTrendingArticles,
+  getTrendingTags,
   getArticlesByRegion,
   getCultureHeritageArticles,
   getFromDistrictsArticles,
@@ -22,6 +23,7 @@ publicRouter.get('/articles', getPublicArticles);
 publicRouter.get('/articles/recent', getRecentArticles);
 publicRouter.get('/articles/search', searchPublicArticles);
 publicRouter.get('/articles/trending', getPublicTrendingArticles);
+publicRouter.get('/articles/trending/tags', getTrendingTags);
 publicRouter.get('/articles/top', getTopNews);
 publicRouter.get('/articles/more-stories', getMoreStories);
 publicRouter.get('/articles/by-tags', getPublicArticlesByTags);

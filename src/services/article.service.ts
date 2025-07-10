@@ -201,6 +201,17 @@ export class ArticleService {
     }
   }
 
+  // Get trending tags only
+  async getTrendingTags(params: TrendingParams): Promise<string[]> {
+    try {
+      return await this.articleRepository.findTrendingTags(params);
+    } catch (error) {
+      console.error('Error in getTrendingTags:', error);
+      console.error('Error stack:', error instanceof Error ? error.stack : 'No stack trace');
+      throw ERRORS.DATABASE_ERROR;
+    }
+  }
+
   // Increment view count
   async incrementViews(id: number): Promise<void> {
     try {
