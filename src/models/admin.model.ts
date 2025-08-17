@@ -1,6 +1,7 @@
 import { RowDataPacket } from "mysql2";
 
-export const ADMIN_TABLE = `
+export const ADMIN_TABLE = 'admins'
+export const CREATE_ADMIN_TABLE_QUERY = `
 CREATE TABLE admins (
   id             INT AUTO_INCREMENT PRIMARY KEY,
   username       VARCHAR(50) NOT NULL UNIQUE,

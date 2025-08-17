@@ -7,6 +7,7 @@ VALUES
 INSERT INTO admins (username, email, password_hash, role)
 VALUES
   ('admin1', 'admin1@example.com', '$2a$10$ABC123fakeAdminHash1', 'super'),
+  ('admin', 'admin@example.com', '$2b$12$Iu4ALo5cBoT1KlbF2r3LYOxa1XMEduRzKsIlR0LgvgsWeHdyQzEqa', 'super');
   ('editor1', 'editor1@example.com', '$2a$10$ABC123fakeAdminHash2', 'editor');
 
 

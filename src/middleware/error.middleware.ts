@@ -9,7 +9,7 @@ export const errorHandler: ErrorRequestHandler = (
     next: NextFunction
 ): void => {
   // Log error for debugging (in production, use proper logging service)
-  console.error('Error occurred:', {
+  console.log('Error occurred:', {
     message: error.message,
     stack: error.stack,
     url: req.url,

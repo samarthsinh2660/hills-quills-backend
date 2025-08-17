@@ -22,6 +22,18 @@ export function createAuthToken(user: TokenData): string {
     return token;
 }
 
+export function createExpiredAuthToken(user: TokenData): string {
+    if (!JWT_SECRET) {
+        throw ERRORS.JWT_SECRET_NOT_CONFIGURED;
+    }
+    
+    const token = jwt.sign(user, JWT_SECRET, {
+        expiresIn: '-1h'
+    } as SignOptions);
+    
+    return token;
+}
+
 export function createRefreshToken(user: TokenData): string {
     if (!JWT_SECRET) {
         throw ERRORS.JWT_SECRET_NOT_CONFIGURED;

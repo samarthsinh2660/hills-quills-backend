@@ -1,24 +1,26 @@
-import express, { Application, Request, Response } from 'express';
-import {limiter} from './middleware/ratelimit.middleware.ts';
-import cookieParser from 'cookie-parser';
-import cors from 'cors';
-import {PORT,CORS_ORIGIN} from './config/env.ts';
-import { connectToDatabase } from './database/db.ts';
-import Loginrouter from './routes/auth.route.ts';
-import articleRouter from './routes/articles.route.ts';
-import publicRouter from './routes/public.route.ts';
-import { errorHandler, notFoundHandler } from './middleware/error.middleware.ts';
-import adminRouter from './routes/admin.route.ts';
-import authorRouter from './routes/author.route.ts';
-import uploadRouter from './routes/upload.route.ts';
-import adsRouter from './routes/ads.route.ts';
-
+import express, { Application, Request, Response } from "express";
+import { limiter } from "./middleware/ratelimit.middleware.ts";
+import cookieParser from "cookie-parser";
+import cors from "cors";
+import { PORT, CORS_ORIGIN } from "./config/env.ts";
+import { connectToDatabase } from "./database/db.ts";
+import loginRouter from "./routes/auth.route.ts";
+import articleRouter from "./routes/articles.route.ts";
+import publicRouter from "./routes/public.route.ts";
+import {
+  errorHandler,
+  notFoundHandler,
+} from "./middleware/error.middleware.ts";
+import adminRouter from "./routes/admin.route.ts";
+import authorRouter from "./routes/author.route.ts";
+import uploadRouter from "./routes/upload.route.ts";
+import adsRouter from "./routes/ads.route.ts";
 
 async function start() {
-    const app: Application = express()
-    
-// Rate limiting middleware
-   app.use(limiter);
+  const app: Application = express();
+
+  // Rate limiting middleware
+  app.use(limiter);
 
    //cors middleware
    app.use(cors({
@@ -44,7 +46,7 @@ async function start() {
    })
   
    //login route
-    app.use('/api/auth', Loginrouter);
+    app.use('/api/auth', loginRouter);
     app.use('/api/articles', articleRouter);
     app.use('/api/public', publicRouter);
     app.use('/api/admin', adminRouter);
@@ -55,15 +57,12 @@ async function start() {
 
     //erros 
     app.use(notFoundHandler);
-    app.use(errorHandler);
 
-
-    app.listen(PORT, async () => {
+  app.listen(PORT, async () => {
     console.log(`Server started on port ${PORT}`);
 
     await connectToDatabase();
-    })
+  });
 }
-
 
 start();

@@ -1,6 +1,6 @@
 import { Request, Response, NextFunction } from "express";
-import { AuthRepository } from "../repositories/auth.repository.ts";
-import { ProfileRepository } from '../repositories/profile.repository.ts';
+import { AuthRepository } from "../repositories/admin.repository.ts";
+import { ProfileRepository } from '../repositories/author.repository.ts';
 import bcrypt from "bcryptjs";
 import {decodeRefreshToken, createAuthToken, createRefreshToken, TokenData } from "../utils/jwt.ts";
 import { ERRORS } from "../utils/error.ts";

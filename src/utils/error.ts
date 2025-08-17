@@ -58,6 +58,8 @@ export const ERRORS = {
     VALIDATION_ERROR: new RequestError("Validation failed", 10008, 422),
     RESOURCE_NOT_FOUND: new RequestError("Resource not found", 10009, 404),
     DUPLICATE_RESOURCE: new RequestError("Resource already exists", 10010, 409),
+    INVALID_AUTHOR_ID: new RequestError("Invalid author ID", 10011, 400),
+    
     
     // Authentication & Authorization Errors (2xxxx)
     NO_TOKEN_PROVIDED: new RequestError("No authentication token provided", 20001, 401),
@@ -70,10 +72,10 @@ export const ERRORS = {
     JWT_SECRET_NOT_CONFIGURED: new RequestError("JWT configuration error", 20008, 500),
     INSUFFICIENT_PERMISSIONS: new RequestError("Insufficient permissions", 20009, 403),
       // New OTP related errors
-  INVALID_OTP: new RequestError ("Invalid or expired OTP",20010,400),
-  OTP_EXPIRED: new RequestError("OTP has expired",20011, 400),
-  PASSWORD_TOO_SHORT: new RequestError ("Password must be at least 6 characters long",20012,400),
-  OTP_SEND_FAILED: new RequestError ("Failed to send OTP",20013,500,),
+    INVALID_OTP: new RequestError ("Invalid or expired OTP",20010,400),
+    OTP_EXPIRED: new RequestError("OTP has expired",20011, 400),
+    PASSWORD_TOO_SHORT: new RequestError ("Password must be at least 6 characters long",20012,400),
+    OTP_SEND_FAILED: new RequestError ("Failed to send OTP",20013,500,),
     
     // Author Service Errors (3xxxx)
     AUTHOR_EMAIL_EXISTS: new RequestError("Author email already exists", 30001, 409),
@@ -82,6 +84,7 @@ export const ERRORS = {
     AUTHOR_REQUIRED_FIELDS: new RequestError("Name, email, and password are required", 30004, 400),
     AUTHOR_PROFILE_UPDATE_FAILED: new RequestError("Failed to update author profile", 30005, 500),
     AUTHOR_ACCOUNT_DISABLED: new RequestError("Author account is disabled", 30006, 403),
+    AUTHOR_CANNOT_BE_DELETED_ARTICLES_FOUND: new RequestError("Cannot delete author with existing articles. Deactivate the author instead.", 30007, 400),
     
     // Admin Service Errors (4xxxx)
     ADMIN_EMAIL_EXISTS: new RequestError("Admin email already exists", 40001, 409),

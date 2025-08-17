@@ -1,5 +1,16 @@
 {
   "compilerOptions": {
+    "baseUrl": "./src",
+    "paths": {
+       "@controller/*": ["controller/*"],
+       "@utils/*": ["utils/*"],
+       "@models/*": ["models/*"],
+       "@middleware/*": ["middleware/*"],
+       "@repositories/*": ["repositories/*"],
+       "@customTypes/*": ["customTypes/*"],
+       "@services/*": ["services/*"],
+       "@repository/*": ["repository/*"],
+     },
     /* Visit https://aka.ms/tsconfig to read more about this file */
 
     /* Projects */
@@ -26,8 +37,8 @@
     // "moduleDetection": "auto",                        /* Control what method is used to detect module-format JS files. */
 
     /* Modules */
-    "module": "NodeNext",
-    "moduleResolution": "nodenext",    
+    "module": "commonjs",
+    "moduleResolution": "node",    
     "allowImportingTsExtensions": true,   
     "noEmit": true,                         /* Specify what module code is generated. */
     // "rootDir": "./",                                  /* Specify the root folder within your source files. */
@@ -111,7 +122,6 @@
 
     /* Completeness */
     // "skipDefaultLibCheck": true,                      /* Skip type checking .d.ts files that are included with TypeScript. */
-    "rootDir": "./src",
     "skipLibCheck": true ,                               /* Skip type checking all .d.ts files. */
   },
   "ts-node": {

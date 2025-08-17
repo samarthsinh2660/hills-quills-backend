@@ -16,7 +16,7 @@ export const authenticate = (req: Request, res: Response, next: NextFunction) =>
         const authHeader = req.headers.authorization;
         
         if (!authHeader || !authHeader.startsWith('Bearer ')) {
-            throw ERRORS.NO_TOKEN_PROVIDED;
+            throw ERRORS.UNAUTHORIZED;
         }
         
         const token = authHeader.substring(7); // Remove 'Bearer ' prefix
