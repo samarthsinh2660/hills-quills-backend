@@ -1,6 +1,6 @@
 import { RowDataPacket } from "mysql2";
 
-export const AUTHOR_TABLE = `
+export const CREATE_AUTHOR_TABLE = `
 CREATE TABLE authors (
   id                INT AUTO_INCREMENT PRIMARY KEY,
   name              VARCHAR(100) NOT NULL,
@@ -13,6 +13,8 @@ CREATE TABLE authors (
   created_at        DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
 )
 `;
+
+export const AUTHOR_TABLE = 'authors';
 
 export interface Author extends RowDataPacket {
   id: number;

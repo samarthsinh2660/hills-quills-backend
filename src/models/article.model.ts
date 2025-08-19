@@ -1,6 +1,6 @@
 import { RowDataPacket } from "mysql2";
 
-export const ARTICLE_TABLE = `
+export const CREATE_ARTICLE_TABLE = `
 CREATE TABLE articles (
   id             INT AUTO_INCREMENT PRIMARY KEY,
   author_id      INT NOT NULL,
@@ -18,7 +18,6 @@ CREATE TABLE articles (
   publish_date   DATETIME,
   created_at     DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
   updated_at     DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-  FOREIGN KEY (author_id) REFERENCES authors(id) ON DELETE RESTRICT,
   INDEX idx_status (status),
   INDEX idx_category (category),
   INDEX idx_region (region),
@@ -27,10 +26,7 @@ CREATE TABLE articles (
   FULLTEXT INDEX idx_search (title, content)
 )`;
 
-// If you need to add tags column to existing table, use this migration:
-export const ADD_TAGS_COLUMN = `
-ALTER TABLE articles ADD COLUMN tags JSON AFTER region;
-`;
+export const ARTICLE_TABLE = 'articles';
 
 export interface Article extends RowDataPacket {
   id: number;

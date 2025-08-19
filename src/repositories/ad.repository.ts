@@ -59,7 +59,7 @@ export class AdRepository implements IAdRepository {
     `;
     
     const [rows] = await db.execute<Ad[]>(query, [id]);
-    
+    console.log('Rows found:', rows);
     if (rows.length === 0) {
       return null;
     }

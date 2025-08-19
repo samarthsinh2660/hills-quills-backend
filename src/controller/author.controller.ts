@@ -1,63 +1,38 @@
-import { Request, Response, NextFunction } from "express";
-import { ERRORS } from "../utils/error.ts";
-import { successResponse } from "../utils/response.ts";
-import { ProfileRepository } from "../repositories/profile.repository.ts";
-import { AuthRepository } from "../repositories/auth.repository.ts";
+import { ERRORS, RequestError } from "../utils/error.ts";
+import { AuthorRepository } from "../repositories/author.repository.ts";
+import { err, Result } from "neverthrow";
+import { Author } from "@models/author.model.ts";
 
-export const updateAuthorProfile = async (req: Request, res: Response, next: NextFunction) => {
-    const { name, about, profession, profile_photo_url } = req.body;
-    
-    try {
-        const user = req.user!;
-        
-        // Only authors can update their own profile via this endpoint
-        if (user.is_admin) {
-            throw ERRORS.UNAUTHORIZED;
-        }
-
-        // Build dynamic update query based on provided fields
-        const updates: string[] = [];
-        const values: any[] = [];
-
-        if (name !== undefined) {
-            updates.push("name = ?");
-            values.push(name);
-        }
-        if (about !== undefined) {
-            updates.push("about = ?");
-            values.push(about);
-        }
-        if (profession !== undefined) {
-            updates.push("profession = ?");
-            values.push(profession);
-        }
-        if (profile_photo_url !== undefined) {
-            updates.push("profile_photo_url = ?");
-            values.push(profile_photo_url);
-        }
-
-        if (updates.length === 0) {
-            throw ERRORS.INVALID_REQUEST_BODY;
-        }
-
-        values.push(user.id);
-
-        await ProfileRepository.updateAuthor(updates.join(", "), values);
-
-        // Fetch updated profile
-        const rows = await AuthRepository.getAuthorById(user.id);
-        
-        if (rows.length === 0) {
-            throw ERRORS.AUTHOR_NOT_FOUND;
-        }
-
-        res.json(
-            successResponse({
-                ...rows[0],
-                is_admin: false
-            }, "Profile updated successfully")
-        );
-    } catch (error) {
-        next(error);
+export const updateAuthorProfile = async (
+    authorId: number,
+    name?: string,
+    email?: string,
+    about?: string,
+    profession?: string,
+    profile_photo_url?: string
+): Promise<Result<Author, RequestError>> => {
+    // Check if author exists
+    const author = await AuthorRepository.getAuthorById(authorId);
+    if (author.isErr()) {
+        return err(author.error);
     }
+    
+    if (!author.value) {
+        return err(ERRORS.AUTHOR_NOT_FOUND);
+    }
+
+    if (email !== undefined) {
+        // Check if email already exists (excluding current author)
+        const existingEmail = await AuthorRepository.findAuthorByEmail(email);
+        if (existingEmail.isErr()) {
+            return err(existingEmail.error);
+        }
+        
+        if (existingEmail.value.length > 0) {
+            return err(ERRORS.AUTHOR_EMAIL_EXISTS);
+        }
+    }
+    
+    // Update author profile
+    return await AuthorRepository.updateAuthor(authorId, name, email, about, profession, profile_photo_url);
 };
